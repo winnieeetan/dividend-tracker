@@ -16,9 +16,14 @@
     --nodiv-bg:#eceef1; --manrow-bg:#eaf4fd;
     --shadow:0 1px 3px rgba(20,30,45,.08),0 4px 16px rgba(20,30,45,.05);
     --radius:12px;
+    color-scheme:light dark;
   }
+  :root[data-theme=light]{color-scheme:light}
+  :root[data-theme=dark]{color-scheme:dark}
+  /* Dark tokens apply when the OS asks for dark and the user hasn't forced light,
+     or when the user picked dark explicitly via the theme button. */
   @media (prefers-color-scheme:dark){
-    :root{
+    :root:not([data-theme=light]){
       --bg:#12161c; --panel:#1a2028; --ink:#e8ecf1; --muted:#96a0ac; --line:#2a333d;
       --accent:#5b8cf5; --accent-soft:#1e2a44;
       --red:#ff8a7a; --red-bg:#3a1f1c; --amber:#f0b661; --amber-bg:#332715;
@@ -27,6 +32,15 @@
       --estblue:#5bb8ea; --estblue-bg:#12303f; --estblue-line:#2b5c74;
       --nodiv-bg:#21272f; --manrow-bg:#14263a;
     }
+  }
+  :root[data-theme=dark]{
+    --bg:#12161c; --panel:#1a2028; --ink:#e8ecf1; --muted:#96a0ac; --line:#2a333d;
+    --accent:#5b8cf5; --accent-soft:#1e2a44;
+    --red:#ff8a7a; --red-bg:#3a1f1c; --amber:#f0b661; --amber-bg:#332715;
+    --green:#67d199; --green-bg:#16301f; --orange:#f0a35f; --orange-bg:#33240f; --orange-line:#6b4a1f;
+    --grey:#6b7480; --shadow:0 1px 3px rgba(0,0,0,.4);
+    --estblue:#5bb8ea; --estblue-bg:#12303f; --estblue-line:#2b5c74;
+    --nodiv-bg:#21272f; --manrow-bg:#14263a;
   }
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -109,7 +123,8 @@
   .b-need{background:var(--orange-bg); color:var(--orange); border:1px solid var(--orange-line)}
   .b-none{background:var(--line); color:var(--muted)}
   .b-dist{background:#efe7fb; color:#6b3fb0}
-  @media (prefers-color-scheme:dark){ .b-dist{background:#2a2140; color:#c3a8f0} }
+  @media (prefers-color-scheme:dark){ :root:not([data-theme=light]) .b-dist{background:#2a2140; color:#c3a8f0} }
+  :root[data-theme=dark] .b-dist{background:#2a2140; color:#c3a8f0}
   .b-unlisted{background:var(--line); color:var(--muted)}
 
   .urg{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px}
@@ -149,7 +164,17 @@
   .banner{background:var(--amber-bg); color:var(--amber); border:1px solid var(--orange-line); border-radius:8px;
           padding:8px 12px; margin:10px 18px 0; font-size:12px}
   .hidden{display:none !important}
+  #themeBtn{min-width:82px}
 </style>
+<script>
+// Applied before first paint so a stored night-mode choice doesn't flash light.
+// No stored choice = follow the OS (the prefers-color-scheme rules above).
+var THEME_KEY = "dividend-tracker/theme@1";
+try{
+  var t = localStorage.getItem(THEME_KEY);
+  if(t==="light"||t==="dark") document.documentElement.dataset.theme = t;
+}catch(e){}
+</script>
 </head>
 <body>
 <header class="top">
@@ -157,6 +182,7 @@
     <h1><span class="dot"></span> Dividend Tracker</h1>
     <div class="updated">Data: <b id="srcLabel">—</b> · Last updated <b id="updatedAt">—</b></div>
     <div style="flex:1"></div>
+    <button class="ghost" id="themeBtn" title="Switch between light and night mode">🌙 Night</button>
     <button class="ghost" id="reloadBtn" title="Re-read dividends.json from the server">↻ Reload data</button>
     <label class="chip" title="Open an updated dividends.json (when viewing without a server)">
       ⤒ Load dividends.json <input type="file" id="fileInput" accept="application/json" class="hidden">
@@ -5537,6 +5563,22 @@ $("#fMarket").onchange=e=>{filters.market=e.target.value; render();};
 $("#cCollapseAll").onclick=()=>{ (DATA&&DATA.counters||[]).forEach(c=>collapsed[c.portfolioLabel]=true); render(); };
 $("#cExpandAll").onclick=()=>{ for(const k in collapsed) delete collapsed[k]; render(); };
 $("#jumpNotCal").onclick=()=>{filters.notCal=true; $("#cNotCal").classList.add("active"); render(); window.scrollTo({top:0,behavior:"smooth"});};
+
+// Theme: no stored choice follows the OS; the button pins light or dark.
+const sysDark = window.matchMedia("(prefers-color-scheme:dark)");
+function isDark(){ const t=document.documentElement.dataset.theme; return t ? t==="dark" : sysDark.matches; }
+function paintThemeBtn(){ const d=isDark(); const b=$("#themeBtn");
+  b.textContent = d ? "☀️ Light" : "🌙 Night";
+  b.title = d ? "Switch to light mode" : "Switch to night mode"; }
+$("#themeBtn").onclick=()=>{
+  const next = isDark() ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  paintThemeBtn();
+};
+// Follow the OS while the user hasn't pinned a mode.
+sysDark.addEventListener("change", ()=>{ if(!document.documentElement.dataset.theme) paintThemeBtn(); });
+paintThemeBtn();
 
 $("#reloadBtn").onclick=loadData;
 $("#fileInput").onchange=e=>readJSON(e.target.files[0], d=>{DATA=d; SOURCE="loaded file"; banner(""); buildFilterOptions(); render();});
