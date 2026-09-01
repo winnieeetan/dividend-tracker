@@ -1,0 +1,5565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dividend Tracker</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2430; --muted:#66707c; --line:#e3e7ec;
+    --accent:#2f6feb; --accent-soft:#eaf1ff;
+    --red:#c0392b; --red-bg:#fdecea; --amber:#a15c00; --amber-bg:#fff4e0;
+    --green:#1f7a4d; --green-bg:#e7f5ec;
+    --orange:#c25e00; --orange-bg:#fff1e2; --orange-line:#f0b06b;
+    --grey:#9aa3ad;
+    --estblue:#2f9bd6; --estblue-bg:#e8f6fd; --estblue-line:#a9dcf3;
+    --nodiv-bg:#eceef1; --manrow-bg:#eaf4fd;
+    --shadow:0 1px 3px rgba(20,30,45,.08),0 4px 16px rgba(20,30,45,.05);
+    --radius:12px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#12161c; --panel:#1a2028; --ink:#e8ecf1; --muted:#96a0ac; --line:#2a333d;
+      --accent:#5b8cf5; --accent-soft:#1e2a44;
+      --red:#ff8a7a; --red-bg:#3a1f1c; --amber:#f0b661; --amber-bg:#332715;
+      --green:#67d199; --green-bg:#16301f; --orange:#f0a35f; --orange-bg:#33240f; --orange-line:#6b4a1f;
+      --grey:#6b7480; --shadow:0 1px 3px rgba(0,0,0,.4);
+      --estblue:#5bb8ea; --estblue-bg:#12303f; --estblue-line:#2b5c74;
+      --nodiv-bg:#21272f; --manrow-bg:#14263a;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       background:var(--bg); color:var(--ink); -webkit-text-size-adjust:100%}
+  a{color:var(--accent)}
+  header.top{position:sticky; top:0; z-index:20; background:var(--panel); border-bottom:1px solid var(--line);
+             box-shadow:var(--shadow); padding:12px 18px}
+  .top-row{display:flex; flex-wrap:wrap; gap:12px 18px; align-items:center}
+  h1{font-size:18px; margin:0; letter-spacing:.2px; display:flex; align-items:center; gap:8px}
+  h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+  .updated{font-size:12px; color:var(--muted)}
+  .updated b{color:var(--ink)}
+  .controls{display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin-top:10px}
+  .controls label{font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px}
+  select,button,input[type=text],input[type=date],input[type=number]{
+    font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:6px 9px}
+  button{cursor:pointer}
+  button.primary{background:var(--accent); color:#fff; border-color:transparent}
+  button.ghost{background:transparent}
+  .chip{display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+        border:1px solid var(--line); background:var(--panel); cursor:pointer; font-size:12px; user-select:none}
+  .chip.active{background:var(--accent); color:#fff; border-color:transparent}
+
+  .layout{display:grid; grid-template-columns:1fr 300px; gap:18px; padding:18px; max-width:1500px; margin:0 auto}
+  @media (max-width:980px){ .layout{grid-template-columns:1fr} aside{order:-1} }
+
+  aside{position:sticky; top:120px; align-self:start; display:flex; flex-direction:column; gap:14px}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px}
+  .card h2{font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:0 0 10px}
+  .stat{display:flex; align-items:baseline; gap:8px; margin-bottom:6px}
+  .stat .big{font-size:22px; font-weight:700}
+  .stat .lab{font-size:12px; color:var(--muted)}
+  .bar{height:8px; border-radius:5px; background:var(--line); overflow:hidden; margin:4px 0 12px}
+  .bar > i{display:block; height:100%; background:var(--green)}
+  .bar.cal > i{background:var(--accent)}
+  .filterlink{display:block; width:100%; text-align:left; margin-top:4px}
+
+  .portfolio{margin-bottom:26px}
+  .portfolio > .p-head{font-size:20px; font-weight:800; padding:8px 8px; border-bottom:3px solid var(--accent);
+        display:flex; align-items:center; gap:10px; position:sticky; top:112px; background:var(--bg); z-index:5;
+        cursor:pointer; user-select:none; border-radius:8px 8px 0 0}
+  .p-head:hover{background:var(--accent-soft)}
+  .p-head.collapsed{border-bottom-color:var(--line)}
+  .p-head .chev{font-size:14px; color:var(--accent); width:16px; display:inline-block}
+  .p-head .ptitle{flex:0 0 auto}
+  .p-head .pcount{font-size:12px; font-weight:600; color:var(--muted)}
+  .market{margin:14px 0 6px}
+  .m-head{font-size:14px; font-weight:700; color:var(--ink); background:var(--accent-soft);
+        border-radius:8px; padding:6px 10px; display:inline-flex; gap:8px; align-items:center}
+  .m-head .mkind{font-size:11px; color:var(--muted); font-weight:600}
+
+  table{width:100%; border-collapse:separate; border-spacing:0; margin-top:6px; background:var(--panel);
+        border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow)}
+  thead th{font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); text-align:left;
+        padding:8px 10px; border-bottom:1px solid var(--line); background:var(--panel); white-space:nowrap}
+  tbody td{padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr.past{opacity:.55}
+  tbody tr.manualneeded{background:var(--orange-bg)}
+  tbody tr.nodiv{background:var(--nodiv-bg)}
+  tbody tr.manualrow{background:var(--manrow-bg)}
+  tbody tr.done .counter .nm{text-decoration:line-through; color:var(--muted)}
+  .m-head{cursor:pointer; user-select:none}
+  .m-head:hover{filter:brightness(.97)}
+  .m-head .mchev{font-size:12px; color:var(--accent)}
+  .counter{min-width:190px}
+  .counter .tk{font-weight:700}
+  .counter .nm{color:var(--ink)}
+  .counter .sub{font-size:11px; color:var(--muted); margin-top:2px}
+  .amt{white-space:nowrap; font-variant-numeric:tabular-nums}
+  .cur{color:var(--muted); font-size:11px; margin-right:3px}
+  .dash{color:var(--grey)}
+
+  .badge{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 7px;
+        border-radius:999px; white-space:nowrap}
+  .b-auto{background:var(--green-bg); color:var(--green)}
+  .b-manual{background:var(--accent-soft); color:var(--accent)}
+  .b-need{background:var(--orange-bg); color:var(--orange); border:1px solid var(--orange-line)}
+  .b-none{background:var(--line); color:var(--muted)}
+  .b-dist{background:#efe7fb; color:#6b3fb0}
+  @media (prefers-color-scheme:dark){ .b-dist{background:#2a2140; color:#c3a8f0} }
+  .b-unlisted{background:var(--line); color:var(--muted)}
+
+  .urg{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 7px; border-radius:6px}
+  .u-red{background:var(--red-bg); color:var(--red)}
+  .u-amber{background:var(--amber-bg); color:var(--amber)}
+  .u-none{color:var(--muted)}
+  .u-past{color:var(--grey)}
+
+  .checks{display:flex; gap:14px; white-space:nowrap}
+  .checks label{display:inline-flex; align-items:center; gap:5px; font-size:12px; cursor:pointer; color:var(--muted)}
+  .checks input{width:16px; height:16px; accent-color:var(--accent); cursor:pointer}
+  .checks label.on{color:var(--green); font-weight:600}
+
+  .prov{font-size:10px; color:var(--muted); margin-top:3px}
+  .b-verified{background:var(--green); color:#fff; font-weight:700}
+  .official{font-size:11px; margin-top:3px}
+  .official a{color:var(--green); font-weight:600; text-decoration:none}
+  .official a:hover{text-decoration:underline}
+  .vbtn{font-size:11px; padding:3px 7px; margin-top:4px; border-color:var(--green); color:var(--green)}
+  .vbtn.on{background:var(--green); color:#fff; border-color:transparent}
+  .est{color:var(--estblue) !important}
+  .b-est{background:var(--estblue-bg); color:var(--estblue); border:1px solid var(--estblue-line)}
+  .mlink{font-size:11px}
+  .mlink a{margin-right:8px; white-space:nowrap}
+  .editbtn{font-size:11px; padding:3px 7px; margin-top:4px}
+
+  .editrow td{background:var(--orange-bg)}
+  .editgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; align-items:end}
+  .editgrid label{font-size:11px; color:var(--muted); display:flex; flex-direction:column; gap:3px}
+  .editactions{display:flex; gap:8px; margin-top:8px}
+
+  .legend{font-size:12px; color:var(--muted); line-height:1.7}
+  .legend .row{display:flex; gap:8px; align-items:flex-start; margin-bottom:2px}
+  .legend b{color:var(--ink)}
+  .empty{padding:40px; text-align:center; color:var(--muted)}
+  .foot{max-width:1500px; margin:0 auto; padding:0 18px 40px; color:var(--muted); font-size:12px}
+  .banner{background:var(--amber-bg); color:var(--amber); border:1px solid var(--orange-line); border-radius:8px;
+          padding:8px 12px; margin:10px 18px 0; font-size:12px}
+  .hidden{display:none !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <h1><span class="dot"></span> Dividend Tracker</h1>
+    <div class="updated">Data: <b id="srcLabel">—</b> · Last updated <b id="updatedAt">—</b></div>
+    <div style="flex:1"></div>
+    <button class="ghost" id="reloadBtn" title="Re-read dividends.json from the server">↻ Reload data</button>
+    <label class="chip" title="Open an updated dividends.json (when viewing without a server)">
+      ⤒ Load dividends.json <input type="file" id="fileInput" accept="application/json" class="hidden">
+    </label>
+  </div>
+  <div class="controls">
+    <label>Portfolio
+      <select id="fPortfolio"><option value="">All</option></select>
+    </label>
+    <label>Market
+      <select id="fMarket"><option value="">All</option></select>
+    </label>
+    <span class="chip" id="cCollapseAll" title="Collapse every portfolio">⊟ Collapse all</span>
+    <span class="chip" id="cExpandAll" title="Expand every portfolio">⊞ Expand all</span>
+    <span class="chip" id="cNext30">⏱ Next 30 days</span>
+    <span class="chip" id="cHideNo">🙈 Hide no-dividend</span>
+    <span class="chip" id="cNotCal">☐ Not yet in calendar</span>
+    <span class="chip" id="cManual">🟧 Needs [manual]</span>
+    <div style="flex:1"></div>
+    <button class="ghost" id="expBtn" title="Download the manual values staff typed">⤓ Export overrides</button>
+    <label class="chip" title="Load a previously exported overrides.json">⤒ Import overrides
+      <input type="file" id="ovInput" accept="application/json" class="hidden"></label>
+    <button class="ghost" id="saveBtn" title="Save overrides to the server (needs server.py)">💾 Save to server</button>
+  </div>
+</header>
+
+<div id="banner" class="banner hidden"></div>
+
+<div class="layout">
+  <main id="board"><div class="empty">Loading…</div></main>
+
+  <aside>
+    <div class="card">
+      <h2>Workflow progress</h2>
+      <div class="stat"><span class="big" id="calDone">0</span><span class="lab">of <b id="calTot">0</b> added to calendar</span></div>
+      <div class="bar cal"><i id="calBar" style="width:0%"></i></div>
+      <button class="ghost filterlink" id="jumpNotCal">→ Show not-yet-in-calendar</button>
+    </div>
+
+    <div class="card">
+      <h2>Data status</h2>
+      <div id="statusCounts" class="legend"></div>
+    </div>
+
+    <div class="card">
+      <h2>Legend</h2>
+      <div class="legend">
+        <div class="row"><span class="urg u-red">▲ ≤7d</span><span>Payment within 7 days — act now.</span></div>
+        <div class="row"><span class="urg u-amber">◆ ≤30d</span><span>Payment within 30 days.</span></div>
+        <div class="row"><span class="urg u-past">✓ paid</span><span>Payment date passed — greyed, sorted to bottom. (Falls back to ex-date when no pay-date is known.)</span></div>
+        <div class="row"><span class="badge b-auto">✓ Auto</span><span>Fetched from Yahoo/API.</span></div>
+        <div class="row"><span class="badge b-verified">✓✓ Verified</span><span><b>Confirmed against the official exchange filing</b> (SEC / HKEXnews / Bursa / SGX). Highest confidence. Use the 📄 link on each row, then click "✓ Mark verified".</span></div>
+        <div class="row"><span class="badge b-manual">✎ Manual</span><span>Staff-entered value.</span></div>
+        <div class="row"><span class="badge b-est">≈ Estimated</span><span><span class="est">Light-blue</span> = forecast (DividendMax / KLSE Screener). Dates are projections, amounts may be paywalled — <b>verify</b> against the 📄 official link.</span></div>
+        <div class="row"><span class="badge b-need">🟧 [manual]</span><span>Couldn't fetch — click a link to look it up & type it in.</span></div>
+        <div class="row"><span class="badge b-none">No dividend</span><span>Known non-payer / growth stock or ETF.</span></div>
+        <div class="row"><span class="badge b-dist">Distribution</span><span>Option-income / weekly-pay ETF (amount varies).</span></div>
+        <div class="row"><span class="badge b-unlisted">Not traded</span><span>Private / unlisted — no dividend data.</span></div>
+        <div class="row"><span>☑</span><span><b>Added to Calendar</b> — tick once the dividend is in your calendar.</span></div>
+        <div class="row"><span style="width:22px;height:14px;border-radius:3px;background:var(--nodiv-bg);border:1px solid var(--line);display:inline-block"></span><span>Grey row = No dividend / not traded.</span></div>
+        <div class="row"><span style="width:22px;height:14px;border-radius:3px;background:var(--manrow-bg);border:1px solid var(--line);display:inline-block"></span><span>Blue row = staff-entered (Manual).</span></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div class="foot" id="foot"></div>
+
+<script>
+// Dividend Tracker front-end. Reads dividends.json (produced server-side).
+// State (checkboxes + manual edits) is in-memory only. Embedded fallback below
+// is used when dividends.json can't be fetched (e.g. file://).
+const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
+  "schema": "dividend-tracker/dividends@1",
+  "lastUpdated": "2026-08-23T06:28:58+00:00",
+  "counterCount": 86,
+  "counters": [
+    {
+      "id": "M_PORTFOLIO|KLSE|7204",
+      "ticker": "7204",
+      "name": "D&O Green Technologies",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "7204.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/7204/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/7204"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=7204"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2024-12-12",
+        "paymentDate": "2024-12-30",
+        "announced": 0.003,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/7204/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|KLSE|6742",
+      "ticker": "6742",
+      "name": "YTL Power International",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "6742.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/6742/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/6742"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=6742"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-06-24",
+        "paymentDate": "2026-07-10",
+        "announced": 0.04,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/6742/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|KLSE|1023",
+      "ticker": "1023",
+      "name": "CIMB Group Holdings",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "1023.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/1023/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/1023"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=1023"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-16",
+        "paymentDate": "2026-03-27",
+        "announced": 0.2035,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/1023/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|KLSE|5031",
+      "ticker": "5031",
+      "name": "TIME dotCom",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "5031.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/5031/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/5031"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=5031"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-12",
+        "paymentDate": "2026-03-25",
+        "announced": 0.0973,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/5031/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|PATH",
+      "ticker": "PATH",
+      "name": "UiPath",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "PATH",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/PATH/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/path/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=PATH&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|GOOGL",
+      "ticker": "GOOGL",
+      "name": "Alphabet Class A",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "GOOGL",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/GOOGL/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/googl/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=GOOGL&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|TSLA",
+      "ticker": "TSLA",
+      "name": "Tesla",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "TSLA",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/TSLA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/tsla/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=TSLA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|AVGO",
+      "ticker": "AVGO",
+      "name": "Broadcom",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "AVGO",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/AVGO/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/avgo/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=AVGO&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-06-22",
+        "paymentDate": "2026-06-30",
+        "currency": "USD",
+        "announced": 0.65,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|AMZN",
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "AMZN",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/AMZN/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/amzn/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=AMZN&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|MSFT",
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "MSFT",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/MSFT/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/msft/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=MSFT&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-20",
+        "paymentDate": "2026-09-10",
+        "currency": "USD",
+        "announced": 0.91,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|PANW",
+      "ticker": "PANW",
+      "name": "Palo Alto Networks",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "PANW",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/PANW/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/panw/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=PANW&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|INFQ",
+      "ticker": "INFQ",
+      "name": "Infleqtion",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": null,
+      "type": "unlisted",
+      "manualLinks": null,
+      "officialLink": null,
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "unlisted"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CRWD",
+      "ticker": "CRWD",
+      "name": "CrowdStrike",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CRWD",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CRWD/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/crwd/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CRWD&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|SPCX",
+      "ticker": "SPCX",
+      "name": "SpaceX",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": null,
+      "type": "unlisted",
+      "manualLinks": null,
+      "officialLink": null,
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "unlisted"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|NVO",
+      "ticker": "NVO",
+      "name": "Novo Nordisk",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "NVO",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/NVO/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/nvo/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=NVO&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-03-30",
+        "paymentDate": "2026-04-08",
+        "currency": "USD",
+        "announced": 0.87369,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|UNH",
+      "ticker": "UNH",
+      "name": "UnitedHealth",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "UNH",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/UNH/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/unh/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=UNH&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-06-15",
+        "paymentDate": "2026-06-23",
+        "currency": "USD",
+        "announced": 2.32,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CAI",
+      "ticker": "CAI",
+      "name": "Caris Life Sciences",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CAI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CAI/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/cai/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CAI&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CRSP",
+      "ticker": "CRSP",
+      "name": "CRISPR Therapeutics",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CRSP",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CRSP/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/crsp/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CRSP&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|ISRG",
+      "ticker": "ISRG",
+      "name": "Intuitive Surgical",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "ISRG",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/ISRG/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/isrg/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=ISRG&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|TSLY",
+      "ticker": "TSLY",
+      "name": "YieldMax TSLA Option Income ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "TSLY",
+      "type": "distribution",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/TSLY/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/tsly/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=TSLY&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-27",
+        "paymentDate": "2026-08-28",
+        "currency": "USD",
+        "announced": 0.2025,
+        "estimated": null,
+        "frequency": "weekly",
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "distribution"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|METU",
+      "ticker": "METU",
+      "name": "Direxion Daily META Bull 2X",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "METU",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/METU/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/metu/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=METU&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|COPX",
+      "ticker": "COPX",
+      "name": "Global X Copper Miners ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "COPX",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/COPX/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/copx/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=COPX&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-06-29",
+        "paymentDate": "2026-07-07",
+        "currency": "USD",
+        "announced": 0.258,
+        "estimated": null,
+        "frequency": "semiannual",
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|HOOY",
+      "ticker": "HOOY",
+      "name": "YieldMax HOOD Option Income ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "HOOY",
+      "type": "distribution",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/HOOY/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/hooy/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=HOOY&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-27",
+        "paymentDate": "2026-08-28",
+        "currency": "USD",
+        "announced": 0.3144,
+        "estimated": null,
+        "frequency": "weekly",
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "distribution"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|DRAM",
+      "ticker": "DRAM",
+      "name": "Roundhill Memory ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "DRAM",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/DRAM/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/dram/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=DRAM&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|NASA",
+      "ticker": "NASA",
+      "name": "Tema Space Innovators ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "NASA",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/NASA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/nasa/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=NASA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|METW",
+      "ticker": "METW",
+      "name": "Roundhill META WeeklyPay ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "METW",
+      "type": "distribution",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/METW/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/metw/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=METW&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-24",
+        "paymentDate": "2026-08-25",
+        "currency": "USD",
+        "announced": 0.24807,
+        "estimated": null,
+        "frequency": "weekly",
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "distribution"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|PLTW",
+      "ticker": "PLTW",
+      "name": "Roundhill PLTR WeeklyPay ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "PLTW",
+      "type": "distribution",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/PLTW/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/pltw/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=PLTW&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-03",
+        "paymentDate": "2026-08-04",
+        "currency": "USD",
+        "announced": 0.13221,
+        "estimated": null,
+        "frequency": "weekly",
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "distribution"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|IAU",
+      "ticker": "IAU",
+      "name": "iShares Gold Trust",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "IAU",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/IAU/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/iau/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=IAU&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|SMR",
+      "ticker": "SMR",
+      "name": "NuScale Power",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "SMR",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/SMR/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/smr/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=SMR&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CHA",
+      "ticker": "CHA",
+      "name": "Chagee Holdings",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CHA",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CHA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/cha/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CHA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2025-12-08",
+        "paymentDate": "2025-12-15",
+        "currency": "USD",
+        "announced": 0.87,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|FCX",
+      "ticker": "FCX",
+      "name": "Freeport-McMoRan",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "FCX",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/FCX/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/fcx/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=FCX&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-07-15",
+        "paymentDate": "2026-08-03",
+        "currency": "USD",
+        "announced": 0.15,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CLSK",
+      "ticker": "CLSK",
+      "name": "CleanSpark",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CLSK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CLSK/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/clsk/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CLSK&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|COIN",
+      "ticker": "COIN",
+      "name": "Coinbase Global",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "COIN",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/COIN/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/coin/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=COIN&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|HOOD",
+      "ticker": "HOOD",
+      "name": "Robinhood Markets",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "HOOD",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/HOOD/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/hood/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=HOOD&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|02318",
+      "ticker": "02318",
+      "name": "Ping An Insurance",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "2318.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/02318/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/2318/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=2318"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-09-02",
+        "paymentDate": "2026-10-16",
+        "announced": null,
+        "currency": "CNY",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/unknown/ping-an-insurance-group-co-of-china-ltd-ordinary-shares-class-h/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|02228",
+      "ticker": "02228",
+      "name": "XtalPi Holdings",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "2228.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/02228/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/2228/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=2228"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|09988",
+      "ticker": "09988",
+      "name": "Alibaba Group",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "9988.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/09988/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/9988/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=9988"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2027-06-09",
+        "paymentDate": "2027-07-05",
+        "announced": null,
+        "currency": "USD",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/retailers/alibaba-group-holding-ltd/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "forecast"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|06082",
+      "ticker": "06082",
+      "name": "Shanghai Biren Tech",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "6082.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/06082/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/6082/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=6082"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|06618",
+      "ticker": "06618",
+      "name": "JD Health International",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "6618.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/06618/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/6618/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=6618"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|D05",
+      "ticker": "D05",
+      "name": "DBS Group",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "D05.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/D05"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/D05/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/D05"
+      },
+      "auto": {
+        "exDate": "2026-08-14",
+        "paymentDate": "2026-08-25",
+        "currency": "SGD",
+        "announced": 0.81,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|O39",
+      "ticker": "O39",
+      "name": "OCBC",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "O39.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/O39"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/O39/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/O39"
+      },
+      "auto": {
+        "exDate": "2026-08-17",
+        "paymentDate": "2026-08-28",
+        "currency": "SGD",
+        "announced": 0.47,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|U11",
+      "ticker": "U11",
+      "name": "UOB",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "U11.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/U11"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/U11/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/U11"
+      },
+      "auto": {
+        "exDate": "2026-08-17",
+        "paymentDate": "2026-08-28",
+        "currency": "SGD",
+        "announced": 0.88,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|BS6",
+      "ticker": "BS6",
+      "name": "Yangzijiang Shipbuilding",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "BS6.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/BS6"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/BS6/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/BS6"
+      },
+      "auto": {
+        "exDate": "2025-05-05",
+        "paymentDate": "2025-05-13",
+        "currency": "SGD",
+        "announced": 0.12,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|C2PU",
+      "ticker": "C2PU",
+      "name": "Parkway Life REIT",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "C2PU.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/C2PU"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/C2PU/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/C2PU"
+      },
+      "auto": {
+        "exDate": "2026-02-09",
+        "paymentDate": "2026-03-10",
+        "currency": "SGD",
+        "announced": 0.0764,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|C38U",
+      "ticker": "C38U",
+      "name": "CapitaLand Integrated Commercial Trust",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "C38U.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/C38U"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/C38U/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/C38U"
+      },
+      "auto": {
+        "exDate": "2026-04-27",
+        "paymentDate": "2026-06-08",
+        "currency": "SGD",
+        "announced": 0.0398,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|ME8U",
+      "ticker": "ME8U",
+      "name": "Mapletree Industrial Trust",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "ME8U.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/ME8U"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/ME8U/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/ME8U"
+      },
+      "auto": {
+        "exDate": "2026-07-30",
+        "paymentDate": "2026-09-07",
+        "currency": "SGD",
+        "announced": 0.023,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|NTDU",
+      "ticker": "NTDU",
+      "name": "NTT DC REIT",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "NTDU.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/NTDU"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/NTDU/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/NTDU"
+      },
+      "auto": {
+        "exDate": "2026-05-19",
+        "paymentDate": "2026-06-29",
+        "currency": "USD",
+        "announced": 0.0556,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|J69U",
+      "ticker": "J69U",
+      "name": "Frasers Centrepoint Trust",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "J69U.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/J69U"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/J69U/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/J69U"
+      },
+      "auto": {
+        "exDate": "2026-05-04",
+        "paymentDate": "2026-05-29",
+        "currency": "SGD",
+        "announced": 0.06136,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|SGX|Z74",
+      "ticker": "Z74",
+      "name": "Singapore Telecommunications",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "Z74.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/Z74"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/Z74/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/Z74"
+      },
+      "auto": {
+        "exDate": "2026-07-31",
+        "paymentDate": "2026-08-19",
+        "currency": "SGD",
+        "announced": 0.103,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|NVDA",
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "NVDA",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/NVDA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/nvda/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=NVDA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-06-04",
+        "paymentDate": "2026-06-26",
+        "currency": "USD",
+        "announced": 0.25,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|MSFT",
+      "ticker": "MSFT",
+      "name": "Microsoft",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "MSFT",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/MSFT/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/msft/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=MSFT&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-20",
+        "paymentDate": "2026-09-10",
+        "currency": "USD",
+        "announced": 0.91,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|MA",
+      "ticker": "MA",
+      "name": "Mastercard",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "MA",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/MA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/ma/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=MA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-07-09",
+        "paymentDate": "2026-08-07",
+        "currency": "USD",
+        "announced": 0.87,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|BRK-B",
+      "ticker": "BRK-B",
+      "name": "Berkshire Hathaway",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "BRK-B",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/BRK-B/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/brk-b/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=BRK-B&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|IBIT",
+      "ticker": "IBIT",
+      "name": "iShares Bitcoin Trust",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "IBIT",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/IBIT/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/ibit/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=IBIT&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|VOO",
+      "ticker": "VOO",
+      "name": "Vanguard S&P 500 ETF",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "VOO",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/VOO/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/voo/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=VOO&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "P_PORTFOLIO|HKSE|01211",
+      "ticker": "01211",
+      "name": "BYD Company",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "1211.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/01211/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/1211/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=1211"
+      },
+      "auto": {
+        "exDate": "2026-06-11",
+        "paymentDate": "2026-07-31",
+        "currency": "HKD",
+        "announced": 0.41141,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "P_PORTFOLIO|HKSE|03067",
+      "ticker": "03067",
+      "name": "iShares Hang Seng TECH ETF",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "3067.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/03067/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/3067/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=3067"
+      },
+      "auto": {
+        "exDate": "2025-12-08",
+        "paymentDate": "2025-12-30",
+        "currency": "HKD",
+        "announced": 0.06,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|00941",
+      "ticker": "00941",
+      "name": "China Mobile",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "0941.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/00941/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/0941/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=0941"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-08-25",
+        "paymentDate": "2026-09-30",
+        "announced": 2.9003,
+        "currency": "HKD",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/communications/china-mobile-limited/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|03988",
+      "ticker": "03988",
+      "name": "Bank of China",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "3988.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/03988/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/3988/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=3988"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-12-02",
+        "paymentDate": "2027-01-22",
+        "announced": null,
+        "currency": "CNY",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/banks/bank-of-china-ltd-ordinary-shares-class-h/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "forecast"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|01288",
+      "ticker": "01288",
+      "name": "Agricultural Bank of China",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "1288.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/01288/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/1288/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=1288"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-12-07",
+        "paymentDate": "2027-01-25",
+        "announced": null,
+        "currency": "CNY",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/banks/agricultural-bank-of-china-ordinary-shares-class-h/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "forecast"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|09988",
+      "ticker": "09988",
+      "name": "Alibaba Group",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "9988.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/09988/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/9988/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=9988"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2027-06-09",
+        "paymentDate": "2027-07-05",
+        "announced": null,
+        "currency": "USD",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/retailers/alibaba-group-holding-ltd/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "forecast"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|03690",
+      "ticker": "03690",
+      "name": "Meituan",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "3690.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/03690/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/3690/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=3690"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|00700",
+      "ticker": "00700",
+      "name": "Tencent",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "0700.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/00700/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/0700/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=0700"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2027-05-21",
+        "paymentDate": "2027-05-31",
+        "announced": null,
+        "currency": "HKD",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/mobile-telecommunications/tencent-holdings-ltd/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "forecast"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|02228",
+      "ticker": "02228",
+      "name": "XtalPi Holdings",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "2228.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/02228/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/2228/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=2228"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "V_PORTFOLIO|HKEX|02318",
+      "ticker": "02318",
+      "name": "Ping An Insurance",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "HKEX",
+      "marketKind": "HKEX",
+      "yahoo": "2318.HK",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xhkg/02318/dividends"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/2318/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=2318"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-09-02",
+        "paymentDate": "2026-10-16",
+        "announced": null,
+        "currency": "CNY",
+        "provider": "dividendmax.com",
+        "url": "https://www.dividendmax.com/hong-kong/hong-kong-stock-exchange/unknown/ping-an-insurance-group-co-of-china-ltd-ordinary-shares-class-h/dividends",
+        "fetchedAt": "2026-08-23",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|METU",
+      "ticker": "METU",
+      "name": "Direxion Daily META Bull 2X",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "METU",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/METU/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/metu/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=METU&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|NVDA",
+      "ticker": "NVDA",
+      "name": "NVIDIA",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "NVDA",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/NVDA/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/nvda/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=NVDA&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-06-04",
+        "paymentDate": "2026-06-26",
+        "currency": "USD",
+        "announced": 0.25,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|GOOGL",
+      "ticker": "GOOGL",
+      "name": "Alphabet Class A",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "GOOGL",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/GOOGL/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/googl/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=GOOGL&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|AMZN",
+      "ticker": "AMZN",
+      "name": "Amazon",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "AMZN",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/AMZN/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/amzn/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=AMZN&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|NVO",
+      "ticker": "NVO",
+      "name": "Novo Nordisk",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "NVO",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/NVO/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/nvo/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=NVO&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-03-30",
+        "paymentDate": "2026-04-08",
+        "currency": "USD",
+        "announced": 0.87369,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|IBIT",
+      "ticker": "IBIT",
+      "name": "iShares Bitcoin Trust",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "IBIT",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/IBIT/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/ibit/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=IBIT&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
+      "id": "V_PORTFOLIO|NYSE/NASDAQ (US)|SMR",
+      "ticker": "SMR",
+      "name": "NuScale Power",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "SMR",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/SMR/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/smr/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=SMR&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|D05",
+      "ticker": "D05",
+      "name": "DBS Group",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "D05.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/D05"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/D05/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/D05"
+      },
+      "auto": {
+        "exDate": "2026-08-14",
+        "paymentDate": "2026-08-25",
+        "currency": "SGD",
+        "announced": 0.81,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|O39",
+      "ticker": "O39",
+      "name": "OCBC",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "O39.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/O39"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/O39/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/O39"
+      },
+      "auto": {
+        "exDate": "2026-08-17",
+        "paymentDate": "2026-08-28",
+        "currency": "SGD",
+        "announced": 0.47,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-23",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|C38U",
+      "ticker": "C38U",
+      "name": "CapitaLand Integrated Commercial Trust",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "C38U.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/C38U"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/C38U/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/C38U"
+      },
+      "auto": {
+        "exDate": "2026-04-27",
+        "paymentDate": "2026-06-08",
+        "currency": "SGD",
+        "announced": 0.0398,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|C2PU",
+      "ticker": "C2PU",
+      "name": "Parkway Life REIT",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "C2PU.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/C2PU"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/C2PU/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/C2PU"
+      },
+      "auto": {
+        "exDate": "2026-02-09",
+        "paymentDate": "2026-03-10",
+        "currency": "SGD",
+        "announced": 0.0764,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|Z74",
+      "ticker": "Z74",
+      "name": "Singapore Telecommunications",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "Z74.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/Z74"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/Z74/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/Z74"
+      },
+      "auto": {
+        "exDate": "2026-07-31",
+        "paymentDate": "2026-08-19",
+        "currency": "SGD",
+        "announced": 0.103,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SGX|C6L",
+      "ticker": "C6L",
+      "name": "Singapore Airlines",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SGX",
+      "marketKind": "SGX",
+      "yahoo": "C6L.SI",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "dividends.sg",
+          "url": "https://www.dividends.sg/view/C6L"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/sgx/C6L/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "SGX filings",
+        "url": "https://www.sgx.com/securities/equities/C6L"
+      },
+      "auto": {
+        "exDate": "2026-08-11",
+        "paymentDate": "2026-08-28",
+        "currency": "SGD",
+        "announced": 0.29,
+        "estimated": null,
+        "frequency": null,
+        "provider": "dividends.sg",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|SWX|UBSG",
+      "ticker": "UBSG",
+      "name": "UBS Group AG",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "SWX",
+      "marketKind": "SWX",
+      "yahoo": "UBSG.SW",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/swx/UBSG/dividend/"
+        },
+        "alt": {
+          "label": "SimplyWall.St",
+          "url": "https://simplywall.st/stocks/ch/any/swx-ubsg"
+        }
+      },
+      "officialLink": {
+        "label": "UBS IR",
+        "url": "https://www.ubs.com/global/en/investor-relations/agm/dividends.html"
+      },
+      "auto": {
+        "exDate": "2026-04-21",
+        "paymentDate": "2026-04-23",
+        "currency": "CHF",
+        "announced": 0.85657,
+        "estimated": null,
+        "frequency": null,
+        "provider": "stockanalysis.com",
+        "fetchedAt": "2026-08-09",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "auto"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|7231",
+      "ticker": "7231",
+      "name": "WellCall Holdings",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "7231.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/7231/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/7231"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=7231"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-06-11",
+        "paymentDate": "2026-06-19",
+        "announced": 0.016,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/7231/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|1023",
+      "ticker": "1023",
+      "name": "CIMB",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "1023.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/1023/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/1023"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=1023"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-16",
+        "paymentDate": "2026-03-27",
+        "announced": 0.2035,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/1023/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|1155",
+      "ticker": "1155",
+      "name": "Maybank",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "1155.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/1155/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/1155"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=1155"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-12",
+        "paymentDate": "2026-03-26",
+        "announced": 0.33,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/1155/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|5347",
+      "ticker": "5347",
+      "name": "Tenaga Nasional",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "5347.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/5347/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/5347"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=5347"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-30",
+        "paymentDate": "2026-04-17",
+        "announced": 0.28,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/5347/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|5031",
+      "ticker": "5031",
+      "name": "TIME dotCom",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "5031.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/5031/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/5031"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=5031"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-03-12",
+        "paymentDate": "2026-03-25",
+        "announced": 0.0973,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/5031/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|9059",
+      "ticker": "9059",
+      "name": "TSH Resources",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "9059.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/9059/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/9059"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=9059"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": "2026-04-14",
+        "paymentDate": "2026-04-30",
+        "announced": 0.05,
+        "currency": "MYR",
+        "provider": "KLSE Screener",
+        "url": "https://www.morningstar.com/stocks/xkls/9059/dividends",
+        "fetchedAt": "2026-08-09",
+        "status": "declared"
+      },
+      "verified": null,
+      "source": "estimated"
+    },
+    {
+      "id": "V_PORTFOLIO|KLSE|0119",
+      "ticker": "0119",
+      "name": "AppAsia",
+      "portfolio": "V_PORTFOLIO",
+      "portfolioLabel": "Portfolio V",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "0119.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/0119/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/0119"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=0119"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "not-fetched (bootstrap)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    }
+  ]
+};
+
+const MS_DAY = 86400000;
+let DATA = null;
+let SOURCE = "embedded";
+const checks = {};
+const overrides = {};
+const editingOpen = {};
+const collapsed = {};
+const collapsedMkt = {};   // "portfolioLabel|market" -> bool
+
+const filters = {
+  portfolio:"", market:"", next30:false, hideNo:false,
+  notCal:false, manualOnly:false,
+};
+
+const $ = s => document.querySelector(s);
+const el = (t,c,h)=>{const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));
+
+function today0(){ const d=new Date(); d.setHours(0,0,0,0); return d; }
+function parseDate(s){ if(!s) return null; const d=new Date(s+"T00:00:00"); return isNaN(d)?null:d; }
+function daysUntil(s){ const d=parseDate(s); if(!d) return null; return Math.round((d-today0())/MS_DAY); }
+function fmtDate(s){ const d=parseDate(s); if(!d) return null;
+  return d.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
+
+function eff(c, field){
+  const ov = overrides[c.id];
+  if(ov && ov[field]!=null && ov[field]!=="") return ov[field];
+  if(c.manual && c.manual[field]!=null && c.manual[field]!=="") return c.manual[field];
+  if(c.auto && c.auto[field]!=null && c.auto[field]!=="") return c.auto[field];
+  if(c.estimate && c.estimate[field]!=null && c.estimate[field]!=="") return c.estimate[field];
+  return null;
+}
+function effSrc(c, field){
+  const ov = overrides[c.id];
+  if(ov && ov[field]!=null && ov[field]!=="") return "manual";
+  if(c.manual && c.manual[field]!=null && c.manual[field]!=="") return "manual";
+  if(c.auto && c.auto[field]!=null && c.auto[field]!=="") return "auto";
+  if(c.estimate && c.estimate[field]!=null && c.estimate[field]!=="") return "estimate";
+  return null;
+}
+function hasManual(c){
+  const ov = overrides[c.id];
+  const src = (ov && Object.values(ov).some(v=>v!=null&&v!=="")) ? ov : (c.manual||{});
+  return ["exDate","paymentDate","currency","announced","estimated","note"].some(k=>src[k]!=null&&src[k]!=="");
+}
+function sortKey(c){
+  const pay = eff(c,"paymentDate"); if(pay) return pay;
+  const ex = eff(c,"exDate"); return ex || null;
+}
+function isVerified(c){
+  const ov = overrides[c.id];
+  if(ov && ov.verified) return true;
+  return !!c.verified;
+}
+function rowSource(c){
+  if(c.type==="unlisted") return "unlisted";
+  if(isVerified(c)) return "verified";
+  if(hasManual(c)) return "manual";
+  if(c.type==="no_dividend") return "no_dividend";
+  const a=c.auto||{};
+  const hasConfirmed = a.announced!=null || a.estimated!=null || a.exDate!=null;
+  if(hasConfirmed) return c.type==="distribution" ? "distribution" : "auto";
+  const e=c.estimate||{};
+  if(e.exDate!=null || e.paymentDate!=null || e.announced!=null) return "estimated";
+  if(c.type==="distribution") return "distribution";
+  return "manual_needed";
+}
+
+async function loadData(){
+  try{
+    const res = await fetch("dividends.json", {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    DATA = await res.json(); SOURCE = "dividends.json (live)";
+    banner("");
+  }catch(e){
+    DATA = EMBEDDED_DATA; SOURCE = "embedded seed (offline)";
+    banner("Couldn't fetch <b>dividends.json</b> ("+esc(e.message)+"). Showing the embedded seed. Run <b>fetch_dividends.py</b> and serve this folder for live data.");
+  }
+  if(!DATA){ $("#board").innerHTML='<div class="empty">No data available.</div>'; return; }
+  buildFilterOptions();
+  render();
+}
+function banner(html){ const b=$("#banner"); if(!html){b.classList.add("hidden");return;} b.innerHTML=html; b.classList.remove("hidden"); }
+
+function buildFilterOptions(){
+  const pf=$("#fPortfolio"), mk=$("#fMarket");
+  const pfs=[...new Set(DATA.counters.map(c=>c.portfolioLabel))];
+  const mks=[...new Set(DATA.counters.map(c=>c.market))];
+  pf.innerHTML='<option value="">All portfolios</option>'+pfs.map(p=>`<option>${esc(p)}</option>`).join("");
+  mk.innerHTML='<option value="">All markets</option>'+mks.map(m=>`<option>${esc(m)}</option>`).join("");
+}
+
+function passesFilter(c){
+  if(filters.portfolio && c.portfolioLabel!==filters.portfolio) return false;
+  if(filters.market && c.market!==filters.market) return false;
+  const src=rowSource(c);
+  if(filters.hideNo && (src==="no_dividend"||src==="unlisted")) return false;
+  if(filters.manualOnly && src!=="manual_needed") return false;
+  if(filters.next30){ const d=daysUntil(sortKey(c)); if(d==null || d<0 || d>30) return false; }
+  const st=checks[c.id]||{};
+  if(filters.notCal && st.cal) return false;
+  return true;
+}
+
+function orderBucket(c){
+  const s=rowSource(c);
+  if(s==="manual_needed") return 1;
+  if(s==="no_dividend" || s==="unlisted") return 2;
+  return 0;
+}
+function sortCounters(list){
+  const t=today0();
+  return list.slice().sort((a,b)=>{
+    const ba=orderBucket(a), bb=orderBucket(b);
+    if(ba!==bb) return ba-bb;
+    if(ba!==0) return a.ticker.localeCompare(b.ticker);
+    const ka=sortKey(a), kb=sortKey(b);
+    const da=ka?parseDate(ka):null, db=kb?parseDate(kb):null;
+    const pa=da? (da<t?1:0):2;
+    const pb=db? (db<t?1:0):2;
+    if(pa!==pb) return pa-pb;
+    if(pa===0) return da-db;
+    if(pa===1) return db-da;
+    return a.ticker.localeCompare(b.ticker);
+  });
+}
+
+function urgencyTag(c){
+  const key=sortKey(c); const d=daysUntil(key);
+  const basis = eff(c,"paymentDate") ? "payment" : "ex-date";
+  if(d==null) return `<span class="urg u-none">—</span>`;
+  if(d<0) return `<span class="urg u-past" title="Paid — ${basis} passed">✓ paid</span>`;
+  if(d<=7) return `<span class="urg u-red" title="${d} day(s) to ${basis}">▲ ${d}d</span>`;
+  if(d<=30) return `<span class="urg u-amber" title="${d} day(s) to ${basis}">◆ ${d}d</span>`;
+  return `<span class="urg u-none">${d}d</span>`;
+}
+
+const BADGE = {
+  verified:`<span class="badge b-verified">✓✓ Verified</span>`,
+  auto:`<span class="badge b-auto">✓ Auto</span>`,
+  manual:`<span class="badge b-manual">✎ Manual</span>`,
+  estimated:`<span class="badge b-est">≈ Estimated</span>`,
+  manual_needed:`<span class="badge b-need">🟧 [manual]</span>`,
+  no_dividend:`<span class="badge b-none">No dividend</span>`,
+  distribution:`<span class="badge b-dist">Distribution</span>`,
+  unlisted:`<span class="badge b-unlisted">Not traded</span>`,
+};
+
+function amtCell(c){
+  const src=rowSource(c);
+  if(src==="no_dividend") return `<span class="dash">No dividend</span>`;
+  if(src==="unlisted")   return `<span class="dash">—</span>`;
+  const cur = eff(c,"currency");
+  const ann = eff(c,"announced"), est = eff(c,"estimated");
+  const estCls = (!isVerified(c) && effSrc(c,"announced")==="estimate") ? " est" : "";
+  const money = (v,cls="") => `<span class="amt${cls}">${cur?`<span class="cur${cls}">${esc(cur)}</span>`:""}${esc(v)}</span>`;
+  if(ann!=null) return money(ann, estCls);
+  if(est!=null) return `${money(est)} <span class="cur" title="Projected, not officially declared">(est)</span>`;
+  if(src==="estimated") return `<span class="amt est" title="Amount not published — verify & enter">— <span class="cur est">(verify)</span></span>`;
+  return `<span class="dash">—</span>`;
+}
+
+function manualLinksHTML(c){
+  const l=c.manualLinks; if(!l) return "";
+  const a=[];
+  if(l.primary) a.push(`<a href="${esc(l.primary.url)}" target="_blank" rel="noopener">${esc(l.primary.label)} ↗</a>`);
+  if(l.alt)     a.push(`<a href="${esc(l.alt.url)}" target="_blank" rel="noopener">${esc(l.alt.label)} ↗</a>`);
+  return `<div class="mlink">${a.join("")}</div>`;
+}
+
+function provNote(c, src){
+  if(src==="auto"||src==="distribution"){
+    const p = c.auto && c.auto.provider;
+    const d = c.auto && c.auto.fetchedAt ? String(c.auto.fetchedAt).slice(0,10) : "";
+    if(p) return `<div class="prov" title="Fetched ${esc(d)}">via ${esc(p)}${d?` · ${esc(d)}`:""}</div>`;
+  }
+  if(src==="estimated"){
+    const e=c.estimate||{}; const d=(e.fetchedAt||"").slice(0,10);
+    const st = e.status ? esc(e.status) : "forecast";
+    const link = e.url ? ` · <a href="${esc(e.url)}" target="_blank" rel="noopener">verify ↗</a>` : "";
+    return `<div class="prov est" title="${st==='declared'?'Dates declared; amount unverified':'Projected — verify'}">${st} · via ${esc(e.provider||"projection")}${d?` · ${esc(d)}`:""}${link}</div>`;
+  }
+  if(src==="verified"){
+    const v=(overrides[c.id]&&overrides[c.id].verified)||c.verified||{};
+    const d=(v.at||"").slice(0,10);
+    return `<div class="prov" style="color:var(--green)">confirmed against official filing${d?` · ${esc(d)}`:""}</div>`;
+  }
+  if(src==="manual"){
+    const ov=overrides[c.id]||{}; const m=c.manual||{};
+    const d=(ov.enteredAt||m.enteredAt||"").slice(0,10);
+    return `<div class="prov">staff-entered${d?` · ${esc(d)}`:""}</div>`;
+  }
+  return "";
+}
+function officialHTML(c){
+  const o=c.officialLink; if(!o) return "";
+  return `<div class="official">📄 <a href="${esc(o.url)}" target="_blank" rel="noopener" title="Official exchange/regulator filing — verify against this, then mark ✓ Verified">${esc(o.label)} ↗</a></div>`;
+}
+function counterRow(c){
+  const src=rowSource(c);
+  const key=sortKey(c); const d=daysUntil(key);
+  const st=checks[c.id]||(checks[c.id]={cal:false,rec:false});
+  const past = d!=null && d<0;
+  const done = st.cal;
+  const clsList=[];
+  if(past) clsList.push("past");
+  if(src==="manual_needed") clsList.push("manualneeded");
+  else if(src==="no_dividend" || src==="unlisted") clsList.push("nodiv");
+  else if(src==="manual") clsList.push("manualrow");
+  if(done) clsList.push("done");
+  const cls=clsList.join(" ");
+
+  const dateCell = f => { const t=fmtDate(eff(c,f)); if(!t) return `<span class="dash">—</span>`;
+    return (!isVerified(c) && effSrc(c,f)==="estimate") ? `<span class="est" title="Forecast — verify">${t}</span>` : t; };
+  const exTxt = dateCell("exDate");
+  const payTxt = dateCell("paymentDate");
+  const freq = eff(c,"frequency");
+  const sub = [c.market, c.yahoo, (src==="distribution"&&freq)?freq:""].filter(Boolean).join(" · ");
+
+  const showLinks = (src==="manual_needed");
+  const editBtn = (src!=="unlisted")
+    ? `<button class="ghost editbtn" data-edit="${esc(c.id)}">${hasManual(c)?"✎ Edit value":"＋ Enter value"}</button>` : "";
+  const canVerify = ["auto","estimated","manual","distribution","verified"].includes(src);
+  const ver = isVerified(c);
+  const verifyBtn = canVerify
+    ? `<button class="ghost vbtn${ver?" on":""}" data-verify="${esc(c.id)}" title="${ver?"Verified against official filing — click to un-verify":"Confirm against the official filing, then mark verified"}">${ver?"✓ Verified":"✓ Mark verified"}</button>` : "";
+
+  const tr = el("tr", cls);
+  tr.dataset.id=c.id;
+  tr.innerHTML = `
+    <td class="counter">
+      <div><span class="tk">[${esc(c.ticker)}]</span> <span class="nm">${esc(c.name)}</span></div>
+      <div class="sub">${esc(sub)}</div>
+      ${showLinks?manualLinksHTML(c):""}
+      ${officialHTML(c)}
+      <div>${editBtn} ${verifyBtn}</div>
+    </td>
+    <td>${exTxt}</td>
+    <td>${payTxt}</td>
+    <td>${urgencyTag(c)}</td>
+    <td>${amtCell(c)}</td>
+    <td>${BADGE[src]||""}${provNote(c,src)}</td>
+    <td>
+      <div class="checks">
+        <label class="${st.cal?"on":""}"><input type="checkbox" data-k="cal" data-id="${esc(c.id)}" ${st.cal?"checked":""}> Added to Calendar</label>
+      </div>
+    </td>`;
+  return tr;
+}
+
+function editForm(c){
+  const cur = k => { const v=eff(c,k); return v==null?"":v; };
+  const tr=el("tr","editrow");
+  tr.innerHTML=`<td colspan="7">
+    <div class="editgrid">
+      <label>Ex-Date<input type="date" data-f="exDate" value="${esc(cur("exDate"))}"></label>
+      <label>Payment Date<input type="date" data-f="paymentDate" value="${esc(cur("paymentDate"))}"></label>
+      <label>Currency<input type="text" data-f="currency" placeholder="MYR/USD/SGD/HKD/CHF" value="${esc(cur("currency"))}"></label>
+      <label>Announced /share<input type="number" step="any" data-f="announced" value="${esc(cur("announced"))}"></label>
+      <label>Estimated /share<input type="number" step="any" data-f="estimated" value="${esc(cur("estimated"))}"></label>
+      <label>Note<input type="text" data-f="note" value="${esc(cur("note"))}"></label>
+    </div>
+    <div class="editactions">
+      <button class="primary" data-save="${esc(c.id)}">Save</button>
+      <button class="ghost" data-cancel="${esc(c.id)}">Cancel</button>
+      <button class="ghost" data-clear="${esc(c.id)}">Clear manual</button>
+      <span style="flex:1"></span>
+      <span class="legend">Saved values show as <b>Manual</b> and survive an auto-refresh.</span>
+    </div></td>`;
+  return tr;
+}
+
+function render(){
+  $("#srcLabel").textContent = SOURCE;
+  $("#updatedAt").textContent = DATA.lastUpdated ? new Date(DATA.lastUpdated).toLocaleString() : "—";
+
+  const board=el("div");
+  const byPf=new Map();
+  for(const c of DATA.counters){
+    if(!byPf.has(c.portfolioLabel)) byPf.set(c.portfolioLabel,new Map());
+    const m=byPf.get(c.portfolioLabel);
+    if(!m.has(c.market)) m.set(c.market,[]);
+    m.get(c.market).push(c);
+  }
+
+  let shown=0;
+  for(const [pfLabel,markets] of byPf){
+    if(filters.portfolio && pfLabel!==filters.portfolio) continue;
+    const marketVis=[]; let pfShown=0;
+    for(const [market,list] of markets){
+      if(filters.market && market!==filters.market) continue;
+      const visible=sortCounters(list.filter(passesFilter));
+      if(!visible.length) continue;
+      marketVis.push([market,list,visible]); pfShown+=visible.length;
+    }
+    if(!pfShown) continue;
+    shown+=pfShown;
+
+    const isCol = !!collapsed[pfLabel];
+    const pfWrap=el("section","portfolio");
+    const pfHead=el("div","p-head"+(isCol?" collapsed":""));
+    pfHead.innerHTML=`<span class="chev">${isCol?"▶":"▼"}</span><span class="ptitle">${esc(pfLabel)}</span>`
+      +`<span class="pcount">${pfShown} counter${pfShown!==1?"s":""}${isCol?" · click to show":""}</span>`;
+    pfHead.title = isCol ? "Click to expand" : "Click to collapse";
+    pfHead.onclick=()=>{ collapsed[pfLabel]=!collapsed[pfLabel]; render(); };
+    pfWrap.appendChild(pfHead);
+
+    if(!isCol){
+      for(const [market,list,visible] of marketVis){
+        const kind = list[0].marketKind;
+        const mkey = pfLabel+"|"+market;
+        const mCol = !!collapsedMkt[mkey];
+        const mWrap=el("div","market");
+        const mHead=el("div","m-head",`<span class="mchev">${mCol?"▶":"▼"}</span> ${esc(market)} <span class="mkind">${esc(kind)}</span> <span class="pcount">${visible.length}</span>`);
+        mHead.title = mCol ? "Click to expand" : "Click to collapse";
+        mHead.onclick=()=>{ collapsedMkt[mkey]=!collapsedMkt[mkey]; render(); };
+        mWrap.appendChild(mHead);
+        if(!mCol){
+          const tbl=el("table");
+          tbl.innerHTML=`<thead><tr>
+            <th>Counter</th><th>Ex-Date</th><th>Payment</th><th>Urgency</th>
+            <th>Dividend / share</th><th>Source</th><th>Added to Cal</th></tr></thead>`;
+          const tb=el("tbody");
+          for(const c of visible){
+            tb.appendChild(counterRow(c));
+            if(editingOpen[c.id]) tb.appendChild(editForm(c));
+          }
+          tbl.appendChild(tb);
+          mWrap.appendChild(tbl);
+        }
+        pfWrap.appendChild(mWrap);
+      }
+    }
+    board.appendChild(pfWrap);
+  }
+
+  const main=$("#board"); main.innerHTML="";
+  if(!shown) main.innerHTML='<div class="empty">No counters match the current filters.</div>';
+  else main.appendChild(board);
+
+  updateStats();
+  renderStatusCounts();
+  wireRows();
+}
+
+function updateStats(){
+  const trackable = DATA.counters.filter(c=>{const s=rowSource(c); return s!=="no_dividend"&&s!=="unlisted";});
+  const tot=trackable.length;
+  let cal=0;
+  for(const c of trackable){ const st=checks[c.id]||{}; if(st.cal)cal++; }
+  $("#calDone").textContent=cal;
+  $("#calTot").textContent=tot;
+  $("#calBar").style.width=(tot?100*cal/tot:0)+"%";
+}
+
+function renderStatusCounts(){
+  const counts={};
+  for(const c of DATA.counters){ const s=rowSource(c); counts[s]=(counts[s]||0)+1; }
+  const map=[["verified","✓✓ Verified"],["auto","✓ Auto"],["manual","✎ Manual"],["estimated","≈ Estimated (verify)"],["manual_needed","🟧 [manual] needed"],
+            ["distribution","Distribution"],["no_dividend","No dividend"],["unlisted","Not traded"]];
+  $("#statusCounts").innerHTML = map.filter(([k])=>counts[k])
+     .map(([k,l])=>`<div class="row"><b>${counts[k]}</b><span>${l}</span></div>`).join("")
+     + `<div class="row" style="margin-top:6px"><b>${DATA.counters.length}</b><span>counters total</span></div>`;
+}
+
+function wireRows(){
+  document.querySelectorAll('input[type=checkbox][data-k]').forEach(cb=>{
+    cb.onchange=()=>{
+      const id=cb.dataset.id, k=cb.dataset.k;
+      checks[id]=checks[id]||{cal:false,rec:false};
+      checks[id][k]=cb.checked;
+      render();
+    };
+  });
+  document.querySelectorAll('button[data-edit]').forEach(b=>{
+    b.onclick=()=>{ const id=b.dataset.edit; editingOpen[id]=!editingOpen[id]; render(); };
+  });
+  document.querySelectorAll('button[data-save]').forEach(b=>{
+    b.onclick=()=>saveEdit(b.dataset.save, b.closest("tr"));
+  });
+  document.querySelectorAll('button[data-cancel]').forEach(b=>{
+    b.onclick=()=>{ editingOpen[b.dataset.cancel]=false; render(); };
+  });
+  document.querySelectorAll('button[data-clear]').forEach(b=>{
+    b.onclick=()=>{ delete overrides[b.dataset.clear]; editingOpen[b.dataset.clear]=false; render(); };
+  });
+  document.querySelectorAll('button[data-verify]').forEach(b=>{
+    b.onclick=()=>{
+      const id=b.dataset.verify;
+      const ov = overrides[id] = overrides[id] || {};
+      if(ov.verified){ delete ov.verified; if(!Object.keys(ov).length) delete overrides[id]; }
+      else ov.verified = {at:new Date().toISOString(), source:"official"};
+      render();
+    };
+  });
+}
+function saveEdit(id, tr){
+  const o={};
+  tr.querySelectorAll('[data-f]').forEach(inp=>{
+    const v=inp.value.trim();
+    if(v!=="") o[inp.dataset.f]= (inp.type==="number"? Number(v): v);
+  });
+  const prevV = overrides[id] && overrides[id].verified;
+  if(Object.keys(o).length){ o.enteredAt=new Date().toISOString(); if(prevV) o.verified=prevV; overrides[id]=o; }
+  else if(prevV) overrides[id]={verified:prevV};
+  else delete overrides[id];
+  editingOpen[id]=false;
+  render();
+}
+
+function chip(idSel, key){ const c=$(idSel); c.onclick=()=>{ filters[key]=!filters[key]; c.classList.toggle("active",filters[key]); render(); }; }
+chip("#cNext30","next30"); chip("#cHideNo","hideNo");
+chip("#cNotCal","notCal"); chip("#cManual","manualOnly");
+$("#fPortfolio").onchange=e=>{filters.portfolio=e.target.value; render();};
+$("#fMarket").onchange=e=>{filters.market=e.target.value; render();};
+$("#cCollapseAll").onclick=()=>{ (DATA&&DATA.counters||[]).forEach(c=>collapsed[c.portfolioLabel]=true); render(); };
+$("#cExpandAll").onclick=()=>{ for(const k in collapsed) delete collapsed[k]; render(); };
+$("#jumpNotCal").onclick=()=>{filters.notCal=true; $("#cNotCal").classList.add("active"); render(); window.scrollTo({top:0,behavior:"smooth"});};
+
+$("#reloadBtn").onclick=loadData;
+$("#fileInput").onchange=e=>readJSON(e.target.files[0], d=>{DATA=d; SOURCE="loaded file"; banner(""); buildFilterOptions(); render();});
+$("#ovInput").onchange=e=>readJSON(e.target.files[0], d=>{
+  const o=d.overrides||d; Object.assign(overrides,o); render();
+  banner("Imported "+Object.keys(o).length+" manual override(s)."); setTimeout(()=>banner(""),3000);
+});
+function readJSON(file, cb){ if(!file)return; const r=new FileReader(); r.onload=()=>{try{cb(JSON.parse(r.result));}catch(err){alert("Invalid JSON: "+err.message);}}; r.readAsText(file); }
+
+$("#expBtn").onclick=()=>{
+  const blob=new Blob([JSON.stringify({schema:"dividend-tracker/overrides@1",overrides},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="overrides.json"; a.click();
+};
+$("#saveBtn").onclick=async()=>{
+  try{
+    const res=await fetch("api/overrides",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({overrides})});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    banner("Saved "+Object.keys(overrides).length+" override(s) to server. They'll merge into the next fetch.");
+    setTimeout(()=>banner(""),4000);
+  }catch(e){ banner("Save-to-server needs the optional <b>server.py</b> running. Use <b>⤓ Export overrides</b> instead. ("+esc(e.message)+")"); }
+};
+
+$("#foot").innerHTML="Live data flows: <b>fetch_dividends.py</b> (server-side) → <b>dividends.json</b> → this dashboard. "
+  +"Manual edits are held in memory; export or save-to-server to keep them across refreshes.";
+
+loadData();
+</script>
+</body>
+</html>
