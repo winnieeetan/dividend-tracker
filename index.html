@@ -5118,7 +5118,10 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
 const MS_DAY = 86400000;
 let DATA = null;
 let SOURCE = "embedded";
-const checks = {};
+const CHECKS_KEY = "dividend-tracker/checks@1";
+const checks = loadChecks();
+function loadChecks(){ try{ return JSON.parse(localStorage.getItem(CHECKS_KEY)) || {}; }catch(e){ return {}; } }
+function saveChecks(){ try{ localStorage.setItem(CHECKS_KEY, JSON.stringify(checks)); }catch(e){} }
 const overrides = {};
 const editingOpen = {};
 const collapsed = {};
@@ -5486,6 +5489,7 @@ function wireRows(){
       const id=cb.dataset.id, k=cb.dataset.k;
       checks[id]=checks[id]||{cal:false,rec:false};
       checks[id][k]=cb.checked;
+      saveChecks();
       render();
     };
   });
