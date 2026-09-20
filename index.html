@@ -257,8 +257,8 @@ try{
 // is used when dividends.json can't be fetched (e.g. file://).
 const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-09-20T05:40:42+00:00",
-  "counterCount": 86,
+  "lastUpdated": "2026-09-20T06:05:03+00:00",
+  "counterCount": 87,
   "counters": [
     {
       "id": "M_PORTFOLIO|KLSE|7204",
@@ -487,6 +487,63 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       },
       "verified": null,
       "source": "estimated"
+    },
+    {
+      "id": "M_PORTFOLIO|KLSE|5285",
+      "ticker": "5285",
+      "name": "SD Guthrie Bhd",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "KLSE",
+      "marketKind": "KLSE",
+      "yahoo": "5285.KL",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "Morningstar",
+          "url": "https://www.morningstar.com/stocks/xkls/5285/dividends"
+        },
+        "alt": {
+          "label": "KLSE Screener",
+          "url": "https://www.klsescreener.com/v2/stocks/view/5285"
+        }
+      },
+      "officialLink": {
+        "label": "Bursa Malaysia",
+        "url": "https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code=5285"
+      },
+      "auto": {
+        "exDate": "2026-10-20",
+        "paymentDate": null,
+        "currency": "MYR",
+        "announced": null,
+        "estimated": 0.1035,
+        "frequency": "semi-annual",
+        "provider": "Yahoo Finance",
+        "fetchedAt": "2026-09-20",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
     },
     {
       "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|PATH",
@@ -1092,63 +1149,6 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       "source": "auto"
     },
     {
-      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|UNH",
-      "ticker": "UNH",
-      "name": "UnitedHealth",
-      "portfolio": "M_PORTFOLIO",
-      "portfolioLabel": "Portfolio M",
-      "market": "NYSE/NASDAQ (US)",
-      "marketKind": "US",
-      "yahoo": "UNH",
-      "type": "ordinary",
-      "manualLinks": {
-        "primary": {
-          "label": "StockAnalysis",
-          "url": "https://stockanalysis.com/stocks/UNH/dividend/"
-        },
-        "alt": {
-          "label": "Nasdaq",
-          "url": "https://www.nasdaq.com/market-activity/stocks/unh/dividend-history"
-        }
-      },
-      "officialLink": {
-        "label": "SEC EDGAR",
-        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=UNH&type=8-K&dateb=&owner=include&count=40"
-      },
-      "auto": {
-        "exDate": "2026-09-14",
-        "paymentDate": "2026-09-22",
-        "currency": "USD",
-        "announced": 2.32,
-        "estimated": null,
-        "frequency": "quarterly",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
-        "error": null
-      },
-      "manual": {
-        "exDate": null,
-        "paymentDate": null,
-        "currency": null,
-        "announced": null,
-        "estimated": null,
-        "note": null,
-        "enteredAt": null
-      },
-      "estimate": {
-        "exDate": null,
-        "paymentDate": null,
-        "announced": null,
-        "currency": null,
-        "provider": null,
-        "url": null,
-        "fetchedAt": null,
-        "status": null
-      },
-      "verified": null,
-      "source": "auto"
-    },
-    {
       "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CAI",
       "ticker": "CAI",
       "name": "Caris Life Sciences",
@@ -1489,63 +1489,6 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       },
       "verified": null,
       "source": "auto"
-    },
-    {
-      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|HOOY",
-      "ticker": "HOOY",
-      "name": "YieldMax HOOD Option Income ETF",
-      "portfolio": "M_PORTFOLIO",
-      "portfolioLabel": "Portfolio M",
-      "market": "NYSE/NASDAQ (US)",
-      "marketKind": "US",
-      "yahoo": "HOOY",
-      "type": "distribution",
-      "manualLinks": {
-        "primary": {
-          "label": "StockAnalysis",
-          "url": "https://stockanalysis.com/stocks/HOOY/dividend/"
-        },
-        "alt": {
-          "label": "Nasdaq",
-          "url": "https://www.nasdaq.com/market-activity/stocks/hooy/dividend-history"
-        }
-      },
-      "officialLink": {
-        "label": "SEC EDGAR",
-        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=HOOY&type=8-K&dateb=&owner=include&count=40"
-      },
-      "auto": {
-        "exDate": "2026-09-17",
-        "paymentDate": null,
-        "currency": "USD",
-        "announced": 0.406,
-        "estimated": null,
-        "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
-        "error": null
-      },
-      "manual": {
-        "exDate": null,
-        "paymentDate": null,
-        "currency": null,
-        "announced": null,
-        "estimated": null,
-        "note": null,
-        "enteredAt": null
-      },
-      "estimate": {
-        "exDate": null,
-        "paymentDate": null,
-        "announced": null,
-        "currency": null,
-        "provider": null,
-        "url": null,
-        "fetchedAt": null,
-        "status": null
-      },
-      "verified": null,
-      "source": "distribution"
     },
     {
       "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|DRAM",
@@ -2151,6 +2094,120 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
         "provider": null,
         "fetchedAt": null,
         "error": "no dividend history at Yahoo Finance"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|VST",
+      "ticker": "VST",
+      "name": "Vistra Corp",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "VST",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/VST/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/vst/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=VST&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-09-21",
+        "paymentDate": "2026-09-30",
+        "currency": "USD",
+        "announced": null,
+        "estimated": 0.229,
+        "frequency": "quarterly",
+        "provider": "Yahoo Finance",
+        "fetchedAt": "2026-09-20",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|CF",
+      "ticker": "CF",
+      "name": "CF Industries Holdings",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "CF",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/CF/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/cf/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=CF&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-08-14",
+        "paymentDate": "2026-08-31",
+        "currency": "USD",
+        "announced": 0.6,
+        "estimated": null,
+        "frequency": "quarterly",
+        "provider": "Yahoo Finance",
+        "fetchedAt": "2026-09-20",
+        "error": null
       },
       "manual": {
         "exDate": null,
