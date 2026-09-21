@@ -32,6 +32,9 @@ OUT = os.path.join(HERE, "dividends.json")
 OVERRIDES = os.path.join(HERE, "overrides.json")
 MARKER = "/*__EMBEDDED_DATA__*/"
 PROVIDER = "Yahoo Finance"
+KLSE_PROVIDER = "KLSE Screener"
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/120 Safari/537.36")
 
 
 # ---------------------------------------------------------------- base data
@@ -115,6 +118,23 @@ NO_DIVIDEND = "no dividend history at %s" % PROVIDER
 STALE_DAYS = 400
 
 
+def drop_if_stale(auto, today):
+    """A counter that last paid years ago has no pending dividend to track.
+
+    Both sources happily report that ancient cycle; keep it as a note so the row
+    falls back to its curated estimate instead of showing as upcoming.
+    """
+    ex = auto.get("exDate")
+    if not ex or auto.get("error"):
+        return auto
+    if (dt.date.fromisoformat(today) - dt.date.fromisoformat(ex)).days <= STALE_DAYS:
+        return auto
+    stale = blank_auto("last dividend %s (over %d days ago)" % (ex, STALE_DAYS))
+    stale["provider"] = auto.get("provider")
+    stale["fetchedAt"] = today
+    return stale
+
+
 def blank_auto(error):
     return {
         "exDate": None, "paymentDate": None, "currency": None,
@@ -137,6 +157,81 @@ def moomoo_available():
             return True
     except OSError:
         return False
+
+
+def _klse_date(text):
+    """'15 Sep 2026' -> '2026-09-15'."""
+    for fmt in ("%d %b %Y", "%d %B %Y"):
+        try:
+            return dt.datetime.strptime(text.strip(), fmt).date().isoformat()
+        except ValueError:
+            pass
+    return None
+
+
+def fetch_klsescreener(code, today):
+    """Declared entitlements for a Bursa counter.
+
+    Yahoo carries no payment date for KLSE listings and falls back to the
+    trailing historical amount, so for Bursa counters this source is better on
+    both counts: it lists the payment date and the amount actually declared for
+    the cycle now pending.
+    """
+    import requests
+    from bs4 import BeautifulSoup
+
+    url = "https://www.klsescreener.com/v2/stocks/view/%s" % code
+    res = requests.get(url, headers={"User-Agent": UA}, timeout=25)
+    res.raise_for_status()
+    soup = BeautifulSoup(res.text, "html.parser")
+
+    table = None
+    for candidate in soup.find_all("table"):
+        heads = [th.get_text(strip=True) for th in candidate.find_all("th")]
+        if any("Payment" in h for h in heads) and any("EX" in h.upper() for h in heads):
+            table = candidate
+            break
+    if table is None:
+        return blank_auto("no entitlement table at KLSE Screener")
+
+    rows = []
+    for tr in table.find_all("tr")[1:]:
+        cells = [td.get_text(strip=True) for td in tr.find_all("td")]
+        if len(cells) < 6:
+            continue                      # financial-year group heading
+        _, _, subject, ex, pay, amount = cells[:6]
+        indicator = cells[6] if len(cells) > 6 else ""
+        if "dividend" not in subject.lower():
+            continue                      # bonus issue, share split, rights
+        if indicator and indicator.lower() != "currency":
+            continue                      # amount is not a per-share figure
+        ex_iso = _klse_date(ex)
+        if not ex_iso:
+            continue
+        try:
+            value = float(amount.replace(",", ""))
+        except ValueError:
+            value = None
+        rows.append((ex_iso, _klse_date(pay), value))
+
+    if not rows:
+        return blank_auto("no dividend rows at KLSE Screener")
+
+    rows.sort()
+    ex_iso, pay_iso, value = rows[-1]     # the cycle furthest forward
+    recent = [dt.date.fromisoformat(r[0]) for r in rows]
+
+    return {
+        "exDate": ex_iso,
+        "paymentDate": pay_iso,
+        "currency": "MYR",
+        "announced": value,               # declared, not inferred
+        "estimated": None,
+        "frequency": infer_frequency(recent),
+        "provider": KLSE_PROVIDER,
+        "fetchedAt": today,
+        "error": None,
+    }
 
 
 def fetch_yahoo(symbol, today):
@@ -164,15 +259,6 @@ def fetch_yahoo(symbol, today):
         ex = history[-1][0].isoformat()
     if not ex and not history:
         return blank_auto(NO_DIVIDEND)
-
-    # A counter that last paid years ago has no pending dividend to track; Yahoo
-    # still reports that ancient ex-date. Surface it as a note and let the row
-    # fall back to the curated estimate instead of showing it as upcoming.
-    if ex and (dt.date.fromisoformat(today) - dt.date.fromisoformat(ex)).days > STALE_DAYS:
-        stale = blank_auto("last dividend %s (over %d days ago)" % (ex, STALE_DAYS))
-        stale["provider"] = PROVIDER
-        stale["fetchedAt"] = today
-        return stale
 
     # Yahoo's dividendDate goes stale independently of exDividendDate; a payment
     # that lands before its own ex-date is a leftover from a prior cycle.
@@ -238,7 +324,15 @@ def main():
         symbol = c["yahoo"]
         if symbol not in cache:
             try:
-                cache[symbol] = fetch_yahoo(symbol, today)
+                if c.get("marketKind") == "KLSE":
+                    got = fetch_klsescreener(c["ticker"], today)
+                    # Bursa counters fall back to Yahoo only if the screener
+                    # gave us nothing usable.
+                    if got.get("error"):
+                        got = fetch_yahoo(symbol, today)
+                else:
+                    got = fetch_yahoo(symbol, today)
+                cache[symbol] = drop_if_stale(got, today)
             except Exception as exc:
                 cache[symbol] = blank_auto("%s: %s" % (type(exc).__name__, exc))
             err = cache[symbol]["error"]

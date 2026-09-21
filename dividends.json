@@ -1,6 +1,6 @@
 {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-09-20T06:05:03+00:00",
+  "lastUpdated": "2026-09-21T06:19:35+00:00",
   "counterCount": 87,
   "counters": [
     {
@@ -34,8 +34,8 @@
         "announced": null,
         "estimated": null,
         "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": "last dividend 2024-12-12 (over 400 days ago)"
       },
       "manual": {
@@ -86,13 +86,13 @@
       },
       "auto": {
         "exDate": "2026-10-01",
-        "paymentDate": null,
+        "paymentDate": "2026-10-23",
         "currency": "MYR",
-        "announced": null,
-        "estimated": 0.04,
+        "announced": 0.04,
+        "estimated": null,
         "frequency": "semi-annual",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -143,13 +143,13 @@
       },
       "auto": {
         "exDate": "2026-09-15",
-        "paymentDate": null,
+        "paymentDate": "2026-09-30",
         "currency": "MYR",
         "announced": 0.1965,
         "estimated": null,
         "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -200,13 +200,13 @@
       },
       "auto": {
         "exDate": "2026-09-11",
-        "paymentDate": null,
+        "paymentDate": "2026-09-25",
         "currency": "MYR",
         "announced": 0.0541,
         "estimated": null,
-        "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "frequency": "quarterly",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -257,13 +257,13 @@
       },
       "auto": {
         "exDate": "2026-10-20",
-        "paymentDate": null,
+        "paymentDate": "2026-11-04",
         "currency": "MYR",
-        "announced": null,
-        "estimated": 0.1035,
+        "announced": 0.1118,
+        "estimated": null,
         "frequency": "semi-annual",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -377,7 +377,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -491,7 +491,7 @@
         "estimated": 0.65,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -605,7 +605,7 @@
         "estimated": 0.91,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -866,7 +866,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1094,7 +1094,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1151,7 +1151,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1208,7 +1208,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1379,7 +1379,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1436,7 +1436,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1607,7 +1607,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1664,7 +1664,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1892,7 +1892,7 @@
         "estimated": 0.229,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -1949,7 +1949,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2006,7 +2006,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2116,11 +2116,11 @@
         "exDate": "2026-06-10",
         "paymentDate": null,
         "currency": "HKD",
-        "announced": 1.0295775,
+        "announced": 1.02963,
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2291,7 +2291,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2348,7 +2348,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2405,7 +2405,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2462,7 +2462,7 @@
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2519,7 +2519,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2576,7 +2576,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2633,7 +2633,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2690,7 +2690,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2747,7 +2747,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2804,7 +2804,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2861,7 +2861,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2918,7 +2918,7 @@
         "estimated": 0.91,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -2975,7 +2975,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3146,7 +3146,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3203,7 +3203,7 @@
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3260,7 +3260,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3317,7 +3317,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3374,7 +3374,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3431,7 +3431,7 @@
         "estimated": 0.149634,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3484,11 +3484,11 @@
         "exDate": "2026-06-10",
         "paymentDate": null,
         "currency": "HKD",
-        "announced": 1.0295775,
+        "announced": 1.02963,
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3602,7 +3602,7 @@
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3716,7 +3716,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3773,7 +3773,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3830,7 +3830,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -3887,7 +3887,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4001,7 +4001,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4172,7 +4172,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4229,7 +4229,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4286,7 +4286,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4343,7 +4343,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4400,7 +4400,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4457,7 +4457,7 @@
         "estimated": null,
         "frequency": "semi-annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4510,11 +4510,11 @@
         "exDate": "2026-04-21",
         "paymentDate": null,
         "currency": "CHF",
-        "announced": 0.90399104,
+        "announced": 0.905487,
         "estimated": null,
         "frequency": "annual",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4565,13 +4565,13 @@
       },
       "auto": {
         "exDate": "2026-09-14",
-        "paymentDate": null,
+        "paymentDate": "2026-09-25",
         "currency": "MYR",
         "announced": 0.016,
         "estimated": null,
-        "frequency": "quarterly",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "frequency": null,
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4622,13 +4622,13 @@
       },
       "auto": {
         "exDate": "2026-09-15",
-        "paymentDate": null,
+        "paymentDate": "2026-09-30",
         "currency": "MYR",
         "announced": 0.1965,
         "estimated": null,
         "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4679,13 +4679,13 @@
       },
       "auto": {
         "exDate": "2026-09-23",
-        "paymentDate": null,
+        "paymentDate": "2026-10-22",
         "currency": "MYR",
-        "announced": null,
-        "estimated": 0.33,
+        "announced": 0.31,
+        "estimated": null,
         "frequency": "semi-annual",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4736,13 +4736,13 @@
       },
       "auto": {
         "exDate": "2026-09-29",
-        "paymentDate": null,
+        "paymentDate": "2026-10-16",
         "currency": "MYR",
-        "announced": null,
-        "estimated": 0.28,
+        "announced": 0.25,
+        "estimated": null,
         "frequency": "semi-annual",
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4793,13 +4793,13 @@
       },
       "auto": {
         "exDate": "2026-09-11",
-        "paymentDate": null,
+        "paymentDate": "2026-09-25",
         "currency": "MYR",
         "announced": 0.0541,
         "estimated": null,
-        "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "frequency": "quarterly",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4850,13 +4850,13 @@
       },
       "auto": {
         "exDate": "2026-04-14",
-        "paymentDate": null,
+        "paymentDate": "2026-04-30",
         "currency": "MYR",
         "announced": 0.05,
         "estimated": null,
         "frequency": null,
-        "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "provider": "KLSE Screener",
+        "fetchedAt": "2026-09-21",
         "error": null
       },
       "manual": {
@@ -4913,7 +4913,7 @@
         "estimated": null,
         "frequency": null,
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-09-20",
+        "fetchedAt": "2026-09-21",
         "error": "last dividend 2006-07-13 (over 400 days ago)"
       },
       "manual": {
