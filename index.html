@@ -257,8 +257,8 @@ try{
 // is used when dividends.json can't be fetched (e.g. file://).
 const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-10-04T17:30:32+00:00",
-  "counterCount": 87,
+  "lastUpdated": "2026-10-04T18:16:14+00:00",
+  "counterCount": 88,
   "counters": [
     {
       "id": "M_PORTFOLIO|KLSE|7204",
@@ -3427,6 +3427,63 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       },
       "verified": null,
       "source": "no_dividend"
+    },
+    {
+      "id": "P_PORTFOLIO|NYSE/NASDAQ (US)|GOOG",
+      "ticker": "GOOG",
+      "name": "Alphabet Class C",
+      "portfolio": "P_PORTFOLIO",
+      "portfolioLabel": "Portfolio P",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "GOOG",
+      "type": "ordinary",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/GOOG/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/goog/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=GOOG&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": "2026-09-04",
+        "paymentDate": "2026-09-14",
+        "currency": "USD",
+        "announced": 0.22,
+        "estimated": null,
+        "frequency": "quarterly",
+        "provider": "Yahoo Finance",
+        "fetchedAt": "2026-10-05",
+        "error": null
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "manual_needed"
     },
     {
       "id": "P_PORTFOLIO|HKSE|01211",
