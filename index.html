@@ -5351,8 +5351,21 @@ async function loadData(){
     banner("Couldn't fetch <b>dividends.json</b> ("+esc(e.message)+"). Showing the embedded seed. Run <b>fetch_dividends.py</b> and serve this folder for live data.");
   }
   if(!DATA){ $("#board").innerHTML='<div class="empty">No data available.</div>'; return; }
+  collapseAll();
   buildFilterOptions();
   render();
+}
+// The board opens as an index: every portfolio and market shut, so the first
+// screen is the shape of the holdings rather than 88 rows of detail.
+function collapseAll(){
+  for(const c of (DATA&&DATA.counters)||[]){
+    collapsed[c.portfolioLabel]=true;
+    collapsedMkt[c.portfolioLabel+"|"+c.market]=true;
+  }
+}
+function expandAll(){
+  for(const k in collapsed) delete collapsed[k];
+  for(const k in collapsedMkt) delete collapsedMkt[k];
 }
 function banner(html){ const b=$("#banner"); if(!html){b.classList.add("hidden");return;} b.innerHTML=html; b.classList.remove("hidden"); }
 
@@ -5688,8 +5701,8 @@ chip("#cNext30","next30"); chip("#cHideNo","hideNo");
 chip("#cNotCal","notCal"); chip("#cManual","manualOnly");
 $("#fPortfolio").onchange=e=>{filters.portfolio=e.target.value; render();};
 $("#fMarket").onchange=e=>{filters.market=e.target.value; render();};
-$("#cCollapseAll").onclick=()=>{ (DATA&&DATA.counters||[]).forEach(c=>collapsed[c.portfolioLabel]=true); render(); };
-$("#cExpandAll").onclick=()=>{ for(const k in collapsed) delete collapsed[k]; render(); };
+$("#cCollapseAll").onclick=()=>{ collapseAll(); render(); };
+$("#cExpandAll").onclick=()=>{ expandAll(); render(); };
 $("#jumpNotCal").onclick=()=>{filters.notCal=true; $("#cNotCal").classList.add("active"); render(); window.scrollTo({top:0,behavior:"smooth"});};
 
 // Theme: no stored choice follows the OS; the button pins light or dark.
