@@ -31,6 +31,7 @@ INDEX = os.path.join(HERE, "index.html")
 OUT = os.path.join(HERE, "dividends.json")
 OVERRIDES = os.path.join(HERE, "overrides.json")
 ROSTER = os.path.join(HERE, "roster.json")
+STANDALONE = os.path.join(HERE, "dividend-tracker.html")
 MARKER = "/*__EMBEDDED_DATA__*/"
 PROVIDER = "Yahoo Finance"
 KLSE_PROVIDER = "KLSE Screener"
@@ -77,6 +78,53 @@ def load_base():
         src = fh.read()
     a, b = _embedded_span(src)
     return json.loads(src[a:b]), "embedded seed"
+
+
+def build_standalone(src):
+    """Write a single file that runs from disk, with the data baked in.
+
+    index.html expects to be served so it can fetch dividends.json. This copy
+    reads the embedded snapshot instead, so it works straight from the Finder,
+    over AirDrop, or on a phone -- no server, no network, no banner.
+    """
+    out = src
+
+    old = re.search(r"async function loadData\(\)\{.*?\n\}\n", out, re.S)
+    out = out.replace(old.group(0), """async function loadData(){
+  // Standalone build: the data is embedded, so there is nothing to fetch.
+  DATA = EMBEDDED_DATA;
+  SOURCE = "standalone file";
+  if(!DATA){ $("#board").innerHTML='<div class="empty">No data available.</div>'; return; }
+  applyRoster();
+  collapseAll();
+  buildFilterOptions();
+  render();
+}
+""", 1)
+
+    # These three need the project folder, so they have no meaning here.
+    for a, b in [
+        ('<button class="ghost" id="reloadBtn"', '<button class="ghost hidden" id="reloadBtn"'),
+        ('<label class="chip" title="Open an updated dividends.json (when viewing without a server)">',
+         '<label class="chip hidden" title="Open an updated dividends.json (when viewing without a server)">'),
+        ('<button class="ghost" id="saveBtn"', '<button class="ghost hidden" id="saveBtn"'),
+    ]:
+        out = out.replace(a, b, 1)
+
+    out = out.replace(
+        '<div class="updated">Data: <b id="srcLabel">\u2014</b> \u00b7 Last updated <b id="updatedAt">\u2014</b></div>',
+        '<div class="updated">Standalone copy \u00b7 data as of <b id="updatedAt">\u2014</b>'
+        '<span id="srcLabel" class="hidden"></span></div>', 1)
+
+    foot = re.search(r'\$\("#foot"\)\.innerHTML=.*?;\n', out, re.S)
+    if foot:
+        out = out.replace(foot.group(0),
+            '$("#foot").innerHTML="Standalone copy \u2014 the data is baked in, so it does not "\n'
+            '  +"change until you rebuild it. Ticks and counter edits are kept in this browser.";\n', 1)
+
+    with open(STANDALONE, "w") as fh:
+        fh.write(out)
+    return STANDALONE
 
 
 def apply_roster(data):
@@ -446,8 +494,12 @@ def main():
     with open(INDEX, "w") as fh:
         fh.write(src[:a] + json.dumps(data, indent=2, ensure_ascii=False) + src[b:])
 
-    print("wrote %s and refreshed the embedded seed in %s"
-          % (os.path.basename(OUT), os.path.basename(INDEX)))
+    with open(INDEX) as fh:
+        build_standalone(fh.read())
+
+    print("wrote %s, refreshed the embedded seed in %s, and rebuilt %s"
+          % (os.path.basename(OUT), os.path.basename(INDEX),
+             os.path.basename(STANDALONE)))
     return 0
 
 

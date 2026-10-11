@@ -54,3 +54,13 @@ good data.
 To read it on a phone, serve the repository over GitHub Pages
 (**Settings → Pages → Deploy from a branch → main / root**). The page is
 responsive and the scheduled commit updates the published site automatically.
+
+## Standalone file (no server, no hosting)
+
+Every run of `fetch_dividends.py` also writes **`dividend-tracker.html`** — one
+self-contained file with the data baked in. Open it straight from the Finder,
+AirDrop it to a phone, or keep it in iCloud Drive; it needs no server and no
+network. Ticks and Counters-tab edits are saved in whichever browser opens it.
+
+Its data is frozen at the moment it was built, so rebuild it (`python3
+fetch_dividends.py`) whenever you want current figures.
