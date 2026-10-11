@@ -30,6 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 INDEX = os.path.join(HERE, "index.html")
 OUT = os.path.join(HERE, "dividends.json")
 OVERRIDES = os.path.join(HERE, "overrides.json")
+ROSTER = os.path.join(HERE, "roster.json")
 MARKER = "/*__EMBEDDED_DATA__*/"
 PROVIDER = "Yahoo Finance"
 KLSE_PROVIDER = "KLSE Screener"
@@ -76,6 +77,43 @@ def load_base():
         src = fh.read()
     a, b = _embedded_span(src)
     return json.loads(src[a:b]), "embedded seed"
+
+
+def apply_roster(data):
+    """Fold in counters added or removed from the dashboard's Counters tab.
+
+    The page writes roster.json; this makes those edits part of the project file
+    so the new counters start collecting dividend data for everyone.
+    """
+    counters = data["counters"]
+    if not os.path.exists(ROSTER):
+        return counters
+
+    with open(ROSTER) as fh:
+        roster = json.load(fh) or {}
+    removed = set(roster.get("removed") or [])
+    added = roster.get("added") or []
+
+    if removed:
+        kept = [c for c in counters if c["id"] not in removed]
+        print("roster: removed %d counter(s)" % (len(counters) - len(kept)))
+        counters = kept
+
+    have = {c["id"] for c in counters}
+    new = 0
+    for entry in added:
+        if not entry.get("id") or entry["id"] in have:
+            continue
+        entry.pop("addedInDashboard", None)   # it is part of the project now
+        entry["auto"] = blank_auto("not-fetched (added via roster)")
+        counters.append(entry)
+        have.add(entry["id"])
+        new += 1
+    if new:
+        print("roster: added %d counter(s)" % new)
+
+    data["counters"] = counters
+    return counters
 
 
 # ------------------------------------------------------------------ helpers
@@ -297,7 +335,7 @@ def main():
     args = ap.parse_args()
 
     data, origin = load_base()
-    counters = data["counters"]
+    counters = apply_roster(data)
     only = {t.strip().upper() for t in args.only.split(",") if t.strip()}
     today = dt.date.today().isoformat()
     print("base: %s (%d counters)" % (origin, len(counters)))

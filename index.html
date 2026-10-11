@@ -163,6 +163,57 @@
   .foot{max-width:1500px; margin:0 auto; padding:0 18px 40px; color:var(--muted); font-size:12px}
   .banner{background:var(--amber-bg); color:var(--amber); border:1px solid var(--orange-line); border-radius:8px;
           padding:8px 12px; margin:10px 18px 0; font-size:12px}
+
+  /* Tabs -------------------------------------------------------------- */
+  .tabs{display:flex; gap:4px; margin-top:12px; border-bottom:1px solid var(--line)}
+  .tab{appearance:none; border:1px solid transparent; border-bottom:none; background:transparent;
+       color:var(--muted); font:inherit; font-weight:600; padding:8px 16px; cursor:pointer;
+       border-radius:8px 8px 0 0; position:relative; top:1px}
+  .tab:hover{color:var(--ink)}
+  .tab[aria-selected=true]{background:var(--panel); border-color:var(--line);
+       color:var(--ink); border-bottom:1px solid var(--panel)}
+  .tab:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+
+  /* Counter manager ---------------------------------------------------- */
+  .mgr{display:grid; gap:14px}
+  .mgr .card h2{margin-bottom:4px}
+  .hint{font-size:12px; color:var(--muted); margin:0 0 12px; max-width:70ch}
+  .formgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px 12px; align-items:end}
+  .field{display:flex; flex-direction:column; gap:4px; min-width:0}
+  .field label{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted)}
+  .field input,.field select{width:100%}
+  .field .note{font-size:11px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .field .note b{color:var(--ink)}
+  .formrow{display:flex; gap:8px; align-items:center; margin-top:12px; flex-wrap:wrap}
+  .formerr{color:var(--red); font-size:12px; min-height:1em}
+
+  .roster{width:100%; border-collapse:collapse}
+  .roster th{font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted);
+             text-align:left; padding:6px 10px; border-bottom:1px solid var(--line); font-weight:600}
+  .roster td{padding:8px 10px; border-bottom:1px solid var(--line); vertical-align:middle}
+  .roster tr:last-child td{border-bottom:none}
+  .roster .tk{font-weight:700}
+  .roster .sub{font-size:11px; color:var(--muted)}
+  .rgroup td{background:var(--accent-soft); font-weight:700; font-size:12px;
+             letter-spacing:.3px; padding:7px 10px}
+  .btn-rm{border:1px solid var(--line); background:var(--panel); color:var(--red);
+          border-radius:7px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer}
+  .btn-rm:hover{background:var(--red-bg); border-color:var(--red)}
+  .btn-undo{border:1px solid var(--line); background:var(--panel); color:var(--green);
+            border-radius:7px; padding:4px 10px; font:inherit; font-size:12px; cursor:pointer}
+  .btn-undo:hover{background:var(--green-bg); border-color:var(--green)}
+  .tag{display:inline-block; font-size:11px; padding:2px 8px; border-radius:999px;
+       border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+  .tag.new{background:var(--amber-bg); color:var(--amber); border-color:var(--orange-line)}
+  .tag.live{background:var(--green-bg); color:var(--green); border-color:transparent}
+  .tag.none{background:var(--nodiv-bg)}
+  .removed-row td{opacity:.65}
+  @media (max-width:700px){
+    .roster thead{display:none}
+    .roster td{display:block; border-bottom:none; padding:3px 10px}
+    .roster tr{display:block; border-bottom:1px solid var(--line); padding:8px 0}
+    .rgroup td{display:block}
+  }
   .hidden{display:none !important}
   #themeBtn{min-width:82px}
 </style>
@@ -207,12 +258,19 @@ try{
       <input type="file" id="ovInput" accept="application/json" class="hidden"></label>
     <button class="ghost" id="saveBtn" title="Save overrides to the server (needs server.py)">💾 Save to server</button>
   </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tabCalendar" role="tab" aria-selected="true" aria-controls="board">Calendar</button>
+    <button class="tab" id="tabCounters" role="tab" aria-selected="false" aria-controls="counters">Counters</button>
+  </div>
 </header>
 
 <div id="banner" class="banner hidden"></div>
 
 <div class="layout">
-  <main id="board"><div class="empty">Loading…</div></main>
+  <main>
+    <div id="board"><div class="empty">Loading…</div></div>
+    <div id="counters" class="mgr hidden"></div>
+  </main>
 
   <aside>
     <div class="card">
@@ -5351,6 +5409,7 @@ async function loadData(){
     banner("Couldn't fetch <b>dividends.json</b> ("+esc(e.message)+"). Showing the embedded seed. Run <b>fetch_dividends.py</b> and serve this folder for live data.");
   }
   if(!DATA){ $("#board").innerHTML='<div class="empty">No data available.</div>'; return; }
+  applyRoster();
   collapseAll();
   buildFilterOptions();
   render();
@@ -5745,6 +5804,371 @@ $("#saveBtn").onclick=async()=>{
 
 $("#foot").innerHTML="Live data flows: <b>fetch_dividends.py</b> (server-side) → <b>dividends.json</b> → this dashboard. "
   +"Manual edits are held in memory; export or save-to-server to keep them across refreshes.";
+
+// ---------------------------------------------------------------- Counters --
+// The dashboard reads a static dividends.json, so a counter added here lives in
+// this browser as an overlay on that file. It shows up on the board right away
+// but carries no dividend data until fetch_dividends.py runs and picks it up --
+// the roster below is what tells the fetcher about it.
+const ROSTER_KEY = "dividend-tracker/roster@1";
+function loadRoster(){
+  try{
+    const r = JSON.parse(localStorage.getItem(ROSTER_KEY));
+    if(r && typeof r === "object") return {added:r.added||[], removed:r.removed||[]};
+  }catch(e){}
+  return {added:[], removed:[]};
+}
+function saveRoster(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); }catch(e){} }
+const roster = loadRoster();
+const addDefaults = {portfolio:"", market:"NYSE/NASDAQ (US)", type:"ordinary"};
+
+// Per-market conventions: how a ticker becomes a Yahoo symbol, and where the
+// research and filing links point. Mirrors what the fetcher already writes.
+const MARKETS = {
+  "NYSE/NASDAQ (US)": {
+    kind:"US", placeholder:"AAPL",
+    yahoo: t => t.toUpperCase(),
+    links: t => ({primary:{label:"StockAnalysis", url:"https://stockanalysis.com/stocks/"+t.toUpperCase()+"/dividend/"},
+                  alt:{label:"Nasdaq", url:"https://www.nasdaq.com/market-activity/stocks/"+t.toLowerCase()+"/dividend-history"}}),
+    official: t => ({label:"SEC EDGAR", url:"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker="+t.toUpperCase()+"&type=8-K&dateb=&owner=include&count=40"}),
+  },
+  "KLSE": {
+    kind:"KLSE", placeholder:"5285",
+    yahoo: t => t + ".KL",
+    links: t => ({primary:{label:"Morningstar", url:"https://www.morningstar.com/stocks/xkls/"+t+"/dividends"},
+                  alt:{label:"KLSE Screener", url:"https://www.klsescreener.com/v2/stocks/view/"+t}}),
+    official: t => ({label:"Bursa Malaysia", url:"https://www.bursamalaysia.com/trade/trading_resources/listing_directory/company-profile?stock_code="+t}),
+  },
+  "SGX": {
+    kind:"SGX", placeholder:"D05",
+    yahoo: t => t.toUpperCase() + ".SI",
+    links: t => ({primary:{label:"dividends.sg", url:"https://www.dividends.sg/view/"+t.toUpperCase()},
+                  alt:{label:"StockAnalysis", url:"https://stockanalysis.com/quote/sgx/"+t.toUpperCase()+"/dividend/"}}),
+    official: t => ({label:"SGX filings", url:"https://www.sgx.com/securities/equities/"+t.toUpperCase()}),
+  },
+  "HKEX": {
+    kind:"HKEX", placeholder:"00941",
+    yahoo: t => hkCode(t) + ".HK",
+    links: t => ({primary:{label:"Morningstar", url:"https://www.morningstar.com/stocks/xhkg/"+t+"/dividends"},
+                  alt:{label:"StockAnalysis", url:"https://stockanalysis.com/quote/hkg/"+hkCode(t)+"/dividend/"}}),
+    official: t => ({label:"HKEXnews", url:"https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId="+hkCode(t)}),
+  },
+  "SWX": {
+    kind:"SWX", placeholder:"UBSG",
+    yahoo: t => t.toUpperCase() + ".SW",
+    links: t => ({primary:{label:"StockAnalysis", url:"https://stockanalysis.com/quote/swx/"+t.toUpperCase()+"/dividend/"},
+                  alt:{label:"SimplyWall.St", url:"https://simplywall.st/stocks/ch/any/swx-"+t.toLowerCase()}}),
+    official: t => ({label:"SIX exchange", url:"https://www.six-group.com/en/products-services/the-swiss-stock-exchange/market-data/shares.html"}),
+  },
+};
+// Yahoo wants Hong Kong codes as four digits: 02318 -> 2318, 941 -> 0941.
+function hkCode(t){ return String(t).replace(/\D/g,"").replace(/^0+/,"").padStart(4,"0"); }
+
+const TYPES = [
+  ["ordinary",    "Ordinary dividend"],
+  ["distribution","Distribution (option-income / weekly-pay ETF)"],
+  ["no_dividend", "Known non-payer"],
+  ["unlisted",    "Private / not traded"],
+];
+
+function emptyBlock(extra){
+  return Object.assign({exDate:null, paymentDate:null, currency:null,
+                        announced:null, estimated:null}, extra||{});
+}
+function makeCounter(f){
+  const mk = MARKETS[f.market];
+  return {
+    id: f.portfolio+"|"+f.market+"|"+f.ticker,
+    ticker: f.ticker, name: f.name,
+    portfolio: f.portfolio, portfolioLabel: f.portfolioLabel,
+    market: f.market, marketKind: mk.kind, yahoo: f.yahoo, type: f.type,
+    manualLinks: mk.links(f.ticker), officialLink: mk.official(f.ticker),
+    auto: emptyBlock({frequency:null, provider:null, fetchedAt:null,
+                      error:"not-fetched (added in dashboard)"}),
+    manual: emptyBlock({note:null, enteredAt:null}),
+    estimate: emptyBlock({provider:null, url:null, fetchedAt:null, status:null}),
+    verified: null, source: "manual_needed", addedInDashboard: true,
+  };
+}
+
+// Overlay the roster on the data the page shipped with.
+function applyRoster(){
+  if(!DATA || !DATA.counters) return;
+  const gone = new Set(roster.removed);
+  DATA.counters = DATA.counters.filter(c => !gone.has(c.id));
+  const have = new Set(DATA.counters.map(c => c.id));
+  for(const c of roster.added){
+    if(!have.has(c.id)){ DATA.counters.push(c); have.add(c.id); }
+  }
+  DATA.counterCount = DATA.counters.length;
+}
+
+function portfolioId(label){
+  const m = /^portfolio\s+(.+)$/i.exec(label.trim());
+  const core = (m ? m[1] : label).trim().toUpperCase().replace(/[^A-Z0-9]+/g,"_");
+  return core.replace(/^_+|_+$/g,"") + "_PORTFOLIO";
+}
+function knownPortfolios(){
+  const seen = new Map();
+  for(const c of (DATA&&DATA.counters)||[]) seen.set(c.portfolio, c.portfolioLabel);
+  for(const c of roster.added) seen.set(c.portfolio, c.portfolioLabel);
+  return [...seen].sort((a,b)=>a[1].localeCompare(b[1]));
+}
+
+function refreshAll(){
+  saveRoster();
+  buildFilterOptions();
+  render();
+  renderCounters();
+}
+
+function addFormState(){
+  const pfSel = $("#nPortfolio");
+  return {
+    ticker: $("#nTicker").value.trim(),
+    name: $("#nName").value.trim(),
+    market: $("#nMarket").value,
+    type: $("#nType").value,
+    newPf: $("#nNewPf").value.trim(),
+    pfValue: pfSel ? pfSel.value : "",
+  };
+}
+function derivedYahoo(){
+  const f = addFormState();
+  const mk = MARKETS[f.market];
+  if(!mk || !f.ticker) return "";
+  const override = $("#nYahoo").value.trim();
+  return override || mk.yahoo(f.ticker);
+}
+function paintDerived(){
+  const mk = MARKETS[$("#nMarket").value];
+  $("#nTicker").placeholder = mk ? mk.placeholder : "Ticker";
+  const y = derivedYahoo();
+  $("#nYahooNote").innerHTML = y ? "Yahoo symbol <b>"+esc(y)+"</b>" : "Yahoo symbol set from the ticker";
+  $("#nNewPfField").classList.toggle("hidden", $("#nPortfolio").value !== "__new__");
+}
+
+function renderCounters(){
+  const wrap = $("#counters");
+  wrap.innerHTML = "";
+
+  // ---- add form ----
+  const add = el("div","card");
+  add.innerHTML = '<h2>Add a counter</h2>'
+    + '<p class="hint">It appears on the board straight away. Dividend dates and amounts arrive '
+    + 'the next time <b>fetch_dividends.py</b> runs — until then the row is badged '
+    + '<span class="tag new">needs fetch</span>.</p>';
+  const grid = el("div","formgrid");
+  grid.innerHTML = `
+    <div class="field"><label for="nTicker">Ticker</label>
+      <input type="text" id="nTicker" placeholder="AAPL" autocomplete="off"></div>
+    <div class="field"><label for="nName">Company name</label>
+      <input type="text" id="nName" placeholder="Apple Inc" autocomplete="off"></div>
+    <div class="field"><label for="nPortfolio">Portfolio</label>
+      <select id="nPortfolio"></select></div>
+    <div class="field hidden" id="nNewPfField"><label for="nNewPf">New portfolio name</label>
+      <input type="text" id="nNewPf" placeholder="Portfolio X" autocomplete="off"></div>
+    <div class="field"><label for="nMarket">Market</label>
+      <select id="nMarket"></select></div>
+    <div class="field"><label for="nType">Type</label>
+      <select id="nType"></select></div>
+    <div class="field"><label for="nYahoo">Yahoo symbol (optional)</label>
+      <input type="text" id="nYahoo" placeholder="auto" autocomplete="off">
+      <span class="note" id="nYahooNote"></span></div>`;
+  add.appendChild(grid);
+  const row = el("div","formrow");
+  row.innerHTML = '<button class="primary" id="nAdd">Add counter</button>'
+                + '<span class="formerr" id="nErr"></span>';
+  add.appendChild(row);
+  wrap.appendChild(add);
+
+  const pfSel = add.querySelector("#nPortfolio");
+  for(const [id,label] of knownPortfolios()){
+    pfSel.appendChild(el("option",null,esc(label))).value = id;
+  }
+  pfSel.appendChild(el("option",null,"+ New portfolio…")).value = "__new__";
+  const mSel = add.querySelector("#nMarket");
+  for(const name of Object.keys(MARKETS)) mSel.appendChild(el("option",null,esc(name))).value = name;
+  const tSel = add.querySelector("#nType");
+  for(const [v,label] of TYPES) tSel.appendChild(el("option",null,esc(label))).value = v;
+  // Carry the last-used choices across the rebuild that follows each add.
+  if(addDefaults.portfolio && [...pfSel.options].some(o=>o.value===addDefaults.portfolio))
+    pfSel.value = addDefaults.portfolio;
+  if([...mSel.options].some(o=>o.value===addDefaults.market)) mSel.value = addDefaults.market;
+  if([...tSel.options].some(o=>o.value===addDefaults.type)) tSel.value = addDefaults.type;
+
+  for(const id of ["#nTicker","#nMarket","#nYahoo","#nPortfolio"]){
+    add.querySelector(id).addEventListener("input", paintDerived);
+    add.querySelector(id).addEventListener("change", paintDerived);
+  }
+  add.querySelector("#nAdd").onclick = submitCounter;
+  add.querySelector("#nTicker").addEventListener("keydown", e=>{ if(e.key==="Enter") submitCounter(); });
+  add.querySelector("#nName").addEventListener("keydown", e=>{ if(e.key==="Enter") submitCounter(); });
+
+  // ---- roster ----
+  const list = el("div","card");
+  const total = (DATA&&DATA.counters||[]).length;
+  list.innerHTML = '<h2>Tracked counters <span class="tag">'+total+'</span></h2>'
+    + '<p class="hint">Removing a counter hides it from the board in this browser only; '
+    + 'the project file is untouched and you can put it back below.</p>';
+  const tbl = el("table","roster");
+  tbl.innerHTML = '<thead><tr><th>Counter</th><th>Market</th><th>Type</th>'
+                + '<th>Data</th><th></th></tr></thead>';
+  const body = el("tbody");
+
+  const byPf = new Map();
+  for(const c of (DATA&&DATA.counters)||[]){
+    if(!byPf.has(c.portfolioLabel)) byPf.set(c.portfolioLabel,[]);
+    byPf.get(c.portfolioLabel).push(c);
+  }
+  for(const [pfLabel,items] of [...byPf].sort((a,b)=>a[0].localeCompare(b[0]))){
+    const head = el("tr","rgroup");
+    head.innerHTML = '<td colspan="5">'+esc(pfLabel)+' · '+items.length+'</td>';
+    body.appendChild(head);
+    for(const c of items.sort((a,b)=>a.ticker.localeCompare(b.ticker))){
+      const tr = el("tr");
+      const a = c.auto||{};
+      let tag = '<span class="tag live">tracked</span>';
+      if(c.addedInDashboard) tag = '<span class="tag new">needs fetch</span>';
+      else if(c.type==="no_dividend") tag = '<span class="tag none">no dividend</span>';
+      else if(c.type==="unlisted")    tag = '<span class="tag none">not traded</span>';
+      else if(a.error)                tag = '<span class="tag none">'+esc(String(a.error).slice(0,28))+'</span>';
+      tr.innerHTML = '<td><span class="tk">'+esc(c.ticker)+'</span> '+esc(c.name)
+                   + '<div class="sub">'+esc(c.yahoo||"")+'</div></td>'
+                   + '<td>'+esc(c.market)+'</td>'
+                   + '<td>'+esc((TYPES.find(t=>t[0]===c.type)||[,c.type])[1])+'</td>'
+                   + '<td>'+tag+'</td>';
+      const act = el("td");
+      const rm = el("button","btn-rm","Remove");
+      rm.onclick = ()=>removeCounter(c);
+      act.appendChild(rm); tr.appendChild(act);
+      body.appendChild(tr);
+    }
+  }
+  tbl.appendChild(body);
+  list.appendChild(tbl);
+  wrap.appendChild(list);
+
+  // ---- removed ----
+  if(roster.removed.length){
+    const rem = el("div","card");
+    rem.innerHTML = '<h2>Removed <span class="tag">'+roster.removed.length+'</span></h2>'
+      + '<p class="hint">Hidden in this browser. Put one back and it returns with its data intact.</p>';
+    const rt = el("table","roster"); const rb = el("tbody");
+    for(const id of roster.removed){
+      const base = (EMBEDDED_DATA.counters||[]).find(c=>c.id===id);
+      const tr = el("tr","removed-row");
+      const bits = id.split("|");
+      tr.innerHTML = '<td><span class="tk">'+esc(base?base.ticker:bits[2]||id)+'</span> '
+                   + esc(base?base.name:"")+'</td>'
+                   + '<td>'+esc(bits[1]||"")+'</td><td>'+esc(bits[0]||"")+'</td><td></td>';
+      const act = el("td");
+      const back = el("button","btn-undo","Put back");
+      back.onclick = ()=>restoreCounter(id);
+      act.appendChild(back); tr.appendChild(act);
+      rb.appendChild(tr);
+    }
+    rt.appendChild(rb); rem.appendChild(rt); wrap.appendChild(rem);
+  }
+
+  // ---- handing changes to the fetcher ----
+  if(roster.added.length || roster.removed.length){
+    const out = el("div","card");
+    out.innerHTML = '<h2>Make it permanent</h2>'
+      + '<p class="hint">These changes live in this browser. Save <b>roster.json</b> next to '
+      + '<b>fetch_dividends.py</b> and run it — the counters join the project file and start '
+      + 'collecting dividend data for everyone.</p>';
+    const r2 = el("div","formrow");
+    const btn = el("button","ghost","↓ Save roster.json");
+    btn.onclick = exportRoster;
+    r2.appendChild(btn);
+    r2.appendChild(el("span","note","· "+roster.added.length+" added, "+roster.removed.length+" removed"));
+    out.appendChild(r2); wrap.appendChild(out);
+  }
+
+  paintDerived();
+}
+
+function submitCounter(){
+  const f = addFormState();
+  const err = m => { $("#nErr").textContent = m; };
+  err("");
+  if(!f.ticker) return err("Enter a ticker.");
+  if(!f.name)   return err("Enter the company name.");
+  if(!MARKETS[f.market]) return err("Pick a market.");
+
+  let portfolio = f.pfValue, portfolioLabel;
+  if(portfolio === "__new__"){
+    if(!f.newPf) return err("Name the new portfolio.");
+    portfolioLabel = f.newPf;
+    portfolio = portfolioId(f.newPf);
+  }else{
+    const found = knownPortfolios().find(p=>p[0]===portfolio);
+    if(!found) return err("Pick a portfolio.");
+    portfolioLabel = found[1];
+  }
+
+  const counter = makeCounter({
+    ticker:f.ticker, name:f.name, portfolio, portfolioLabel,
+    market:f.market, type:f.type, yahoo:derivedYahoo(),
+  });
+  if((DATA.counters||[]).some(c=>c.id===counter.id))
+    return err(f.ticker+" is already in "+portfolioLabel+".");
+
+  roster.added.push(counter);
+  roster.removed = roster.removed.filter(id=>id!==counter.id);
+  addDefaults.portfolio = portfolio; addDefaults.market = f.market; addDefaults.type = f.type;
+  $("#nTicker").value = ""; $("#nName").value = ""; $("#nYahoo").value = "";
+  applyRosterToLive(counter, null);
+  refreshAll();
+  banner("Added <b>"+esc(counter.ticker)+"</b> to "+esc(portfolioLabel)
+        +". Run <b>fetch_dividends.py</b> to fill in its dividend data.");
+  setTimeout(()=>banner(""), 6000);
+}
+
+function applyRosterToLive(add, removeId){
+  if(add) DATA.counters.push(add);
+  if(removeId) DATA.counters = DATA.counters.filter(c=>c.id!==removeId);
+  DATA.counterCount = DATA.counters.length;
+}
+
+function removeCounter(c){
+  if(c.addedInDashboard){
+    roster.added = roster.added.filter(x=>x.id!==c.id);
+  }else if(!roster.removed.includes(c.id)){
+    roster.removed.push(c.id);
+  }
+  applyRosterToLive(null, c.id);
+  delete checks[c.id];
+  refreshAll();
+}
+
+function restoreCounter(id){
+  roster.removed = roster.removed.filter(x=>x!==id);
+  const base = (EMBEDDED_DATA.counters||[]).find(c=>c.id===id);
+  if(base) applyRosterToLive(JSON.parse(JSON.stringify(base)), null);
+  refreshAll();
+}
+
+function exportRoster(){
+  const blob = new Blob([JSON.stringify({schema:"dividend-tracker/roster@1",
+    added:roster.added, removed:roster.removed}, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "roster.json"; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+
+function showTab(which){
+  const onCounters = which === "counters";
+  $("#board").classList.toggle("hidden", onCounters);
+  $("#counters").classList.toggle("hidden", !onCounters);
+  $(".controls").classList.toggle("hidden", onCounters);
+  $("#tabCalendar").setAttribute("aria-selected", String(!onCounters));
+  $("#tabCounters").setAttribute("aria-selected", String(onCounters));
+  if(onCounters) renderCounters();
+}
+$("#tabCalendar").onclick = ()=>showTab("calendar");
+$("#tabCounters").onclick = ()=>showTab("counters");
 
 loadData();
 </script>
