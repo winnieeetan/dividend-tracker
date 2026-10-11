@@ -42,18 +42,14 @@ so the same edits are not replayed on the next run.
 
 ## Automatic refresh
 
-`.github/workflows/refresh.yml` runs the fetcher on GitHub's servers every
-weekday at 01:00 UTC (09:00 MYT/SGT) and commits `dividends.json` and
-`index.html` back to `main` when the data moves. It can also be run on demand
-from the repository's **Actions** tab.
+A scheduled cloud agent ("Dividend tracker daily refresh") runs every weekday at
+01:00 UTC / 09:00 MYT. It runs the fetcher, pushes the result to `main`, and
+writes the new snapshot into the shared dashboard's database so every open copy
+picks it up. Manage or pause it at https://claude.ai/code/routines
 
-The job passes `--min-ok 40`: if a source throttles the runner and fewer than 40
-counters come back clean, it exits without writing, so a bad run cannot replace
-good data.
-
-To read it on a phone, serve the repository over GitHub Pages
-(**Settings → Pages → Deploy from a branch → main / root**). The page is
-responsive and the scheduled commit updates the published site automatically.
+It passes `--min-ok 40`: if a source throttles the runner and fewer than 40
+counters come back clean, the run stops without writing, so a bad fetch cannot
+replace good data.
 
 ## Standalone file (no server, no hosting)
 
