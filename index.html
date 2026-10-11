@@ -214,6 +214,26 @@
     .roster tr{display:block; border-bottom:1px solid var(--line); padding:8px 0}
     .rgroup td{display:block}
   }
+
+  /* Roster groups: same language as the board, sized for inside a card. */
+  .rp{border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:10px}
+  .rp-head{display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer;
+           user-select:none; background:var(--panel); font-weight:800; font-size:15px}
+  .rp-head:hover{background:var(--accent-soft)}
+  .rp-head .chev{color:var(--accent); width:14px; display:inline-block; font-size:12px}
+  .rp-head .pcount{font-size:12px; font-weight:600; color:var(--muted); margin-left:auto;
+                   font-variant-numeric:tabular-nums}
+  .rp-body{border-top:1px solid var(--line)}
+  .rm{border-bottom:1px solid var(--line)}
+  .rm:last-child{border-bottom:none}
+  .rm-head{display:flex; align-items:center; gap:8px; padding:7px 12px 7px 24px; cursor:pointer;
+           user-select:none; background:var(--accent-soft); font-weight:700; font-size:13px}
+  .rm-head:hover{filter:brightness(.97)}
+  .rm-head .mchev{color:var(--accent); font-size:11px; width:12px; display:inline-block}
+  .rm-head .mkind{font-size:11px; color:var(--muted); font-weight:600}
+  .rm-head .pcount{font-size:12px; font-weight:600; color:var(--muted); margin-left:auto;
+                   font-variant-numeric:tabular-nums}
+  .rm-body .roster td:first-child{padding-left:24px}
   .hidden{display:none !important}
   #themeBtn{min-width:82px}
 </style>
@@ -5821,6 +5841,30 @@ function loadRoster(){
 function saveRoster(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(roster)); }catch(e){} }
 const roster = loadRoster();
 const addDefaults = {portfolio:"", market:"NYSE/NASDAQ (US)", type:"ordinary"};
+// Roster groups collapse independently of the board's.
+const rCol = {};      // portfolioLabel -> bool
+const rColMkt = {};   // "portfolioLabel|market" -> bool
+let rosterPrimed = false;
+function primeRoster(){
+  if(rosterPrimed) return;
+  for(const c of (DATA&&DATA.counters)||[]){
+    rCol[c.portfolioLabel] = true;
+    rColMkt[c.portfolioLabel+"|"+c.market] = true;
+  }
+  rosterPrimed = true;
+}
+function rosterCollapseAll(){
+  for(const c of (DATA&&DATA.counters)||[]){
+    rCol[c.portfolioLabel] = true;
+    rColMkt[c.portfolioLabel+"|"+c.market] = true;
+  }
+  renderCounters();
+}
+function rosterExpandAll(){
+  for(const k in rCol) delete rCol[k];
+  for(const k in rColMkt) delete rColMkt[k];
+  renderCounters();
+}
 
 // Per-market conventions: how a ticker becomes a Yahoo symbol, and where the
 // research and filing links point. Mirrors what the fetcher already writes.
@@ -6006,47 +6050,87 @@ function renderCounters(){
   add.querySelector("#nName").addEventListener("keydown", e=>{ if(e.key==="Enter") submitCounter(); });
 
   // ---- roster ----
+  primeRoster();
   const list = el("div","card");
   const total = (DATA&&DATA.counters||[]).length;
   list.innerHTML = '<h2>Tracked counters <span class="tag">'+total+'</span></h2>'
     + '<p class="hint">Removing a counter hides it from the board in this browser only; '
     + 'the project file is untouched and you can put it back below.</p>';
-  const tbl = el("table","roster");
-  tbl.innerHTML = '<thead><tr><th>Counter</th><th>Market</th><th>Type</th>'
-                + '<th>Data</th><th></th></tr></thead>';
-  const body = el("tbody");
+  const bar = el("div","formrow");
+  const cAll = el("button","ghost","\u229f Collapse all");
+  cAll.onclick = rosterCollapseAll;
+  const eAll = el("button","ghost","\u229e Expand all");
+  eAll.onclick = rosterExpandAll;
+  bar.appendChild(cAll); bar.appendChild(eAll);
+  list.appendChild(bar);
 
+  // Portfolio -> market -> counters, each level collapsible like the board.
   const byPf = new Map();
   for(const c of (DATA&&DATA.counters)||[]){
-    if(!byPf.has(c.portfolioLabel)) byPf.set(c.portfolioLabel,[]);
-    byPf.get(c.portfolioLabel).push(c);
+    if(!byPf.has(c.portfolioLabel)) byPf.set(c.portfolioLabel,new Map());
+    const m = byPf.get(c.portfolioLabel);
+    if(!m.has(c.market)) m.set(c.market,[]);
+    m.get(c.market).push(c);
   }
-  for(const [pfLabel,items] of [...byPf].sort((a,b)=>a[0].localeCompare(b[0]))){
-    const head = el("tr","rgroup");
-    head.innerHTML = '<td colspan="5">'+esc(pfLabel)+' · '+items.length+'</td>';
-    body.appendChild(head);
-    for(const c of items.sort((a,b)=>a.ticker.localeCompare(b.ticker))){
-      const tr = el("tr");
-      const a = c.auto||{};
-      let tag = '<span class="tag live">tracked</span>';
-      if(c.addedInDashboard) tag = '<span class="tag new">needs fetch</span>';
-      else if(c.type==="no_dividend") tag = '<span class="tag none">no dividend</span>';
-      else if(c.type==="unlisted")    tag = '<span class="tag none">not traded</span>';
-      else if(a.error)                tag = '<span class="tag none">'+esc(String(a.error).slice(0,28))+'</span>';
-      tr.innerHTML = '<td><span class="tk">'+esc(c.ticker)+'</span> '+esc(c.name)
-                   + '<div class="sub">'+esc(c.yahoo||"")+'</div></td>'
-                   + '<td>'+esc(c.market)+'</td>'
-                   + '<td>'+esc((TYPES.find(t=>t[0]===c.type)||[,c.type])[1])+'</td>'
-                   + '<td>'+tag+'</td>';
-      const act = el("td");
-      const rm = el("button","btn-rm","Remove");
-      rm.onclick = ()=>removeCounter(c);
-      act.appendChild(rm); tr.appendChild(act);
-      body.appendChild(tr);
+
+  for(const [pfLabel,markets] of [...byPf].sort((a,b)=>a[0].localeCompare(b[0]))){
+    const pfCount = [...markets.values()].reduce((n,l)=>n+l.length,0);
+    const pCol = !!rCol[pfLabel];
+    const sec = el("div","rp");
+    const head = el("div","rp-head");
+    head.innerHTML = '<span class="chev">'+(pCol?"\u25b6":"\u25bc")+'</span>'
+                   + '<span>'+esc(pfLabel)+'</span>'
+                   + '<span class="pcount">'+pfCount+' counter'+(pfCount!==1?"s":"")+'</span>';
+    head.title = pCol ? "Click to expand" : "Click to collapse";
+    head.onclick = ()=>{ rCol[pfLabel] = !rCol[pfLabel]; renderCounters(); };
+    sec.appendChild(head);
+
+    if(!pCol){
+      const body = el("div","rp-body");
+      for(const [market,items] of [...markets].sort((a,b)=>a[0].localeCompare(b[0]))){
+        const mkey = pfLabel+"|"+market;
+        const mCol = !!rColMkt[mkey];
+        const mWrap = el("div","rm");
+        const mHead = el("div","rm-head");
+        mHead.innerHTML = '<span class="mchev">'+(mCol?"\u25b6":"\u25bc")+'</span>'
+                        + '<span>'+esc(market)+'</span>'
+                        + '<span class="mkind">'+esc(items[0].marketKind)+'</span>'
+                        + '<span class="pcount">'+items.length+'</span>';
+        mHead.title = mCol ? "Click to expand" : "Click to collapse";
+        mHead.onclick = ()=>{ rColMkt[mkey] = !rColMkt[mkey]; renderCounters(); };
+        mWrap.appendChild(mHead);
+
+        if(!mCol){
+          const mBody = el("div","rm-body");
+          const tbl = el("table","roster");
+          tbl.innerHTML = '<thead><tr><th>Counter</th><th>Type</th><th>Data</th><th></th></tr></thead>';
+          const tb = el("tbody");
+          for(const c of items.sort((a,b)=>a.ticker.localeCompare(b.ticker))){
+            const tr = el("tr");
+            const a = c.auto||{};
+            let tag = '<span class="tag live">tracked</span>';
+            if(c.addedInDashboard)          tag = '<span class="tag new">needs fetch</span>';
+            else if(c.type==="no_dividend") tag = '<span class="tag none">no dividend</span>';
+            else if(c.type==="unlisted")    tag = '<span class="tag none">not traded</span>';
+            else if(a.error)                tag = '<span class="tag none">'+esc(String(a.error).slice(0,28))+'</span>';
+            tr.innerHTML = '<td><span class="tk">'+esc(c.ticker)+'</span> '+esc(c.name)
+                         + '<div class="sub">'+esc(c.yahoo||"")+'</div></td>'
+                         + '<td>'+esc((TYPES.find(t=>t[0]===c.type)||[,c.type])[1])+'</td>'
+                         + '<td>'+tag+'</td>';
+            const act = el("td");
+            const rm = el("button","btn-rm","Remove");
+            rm.onclick = ()=>removeCounter(c);
+            act.appendChild(rm); tr.appendChild(act);
+            tb.appendChild(tr);
+          }
+          tbl.appendChild(tb); mBody.appendChild(tbl); mWrap.appendChild(mBody);
+        }
+        body.appendChild(mWrap);
+      }
+      sec.appendChild(body);
     }
+    list.appendChild(sec);
   }
-  tbl.appendChild(body);
-  list.appendChild(tbl);
   wrap.appendChild(list);
 
   // ---- removed ----
