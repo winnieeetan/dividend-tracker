@@ -68,6 +68,7 @@
 
   .layout{display:grid; grid-template-columns:1fr 300px; gap:18px; padding:18px; max-width:1500px; margin:0 auto}
   @media (max-width:980px){ .layout{grid-template-columns:1fr} aside{order:-1} }
+  @media (max-width:640px){ .layout{grid-template-columns:minmax(0,1fr)} }
 
   aside{position:sticky; top:120px; align-self:start; display:flex; flex-direction:column; gap:14px}
   .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px}
@@ -234,6 +235,35 @@
   .rm-head .pcount{font-size:12px; font-weight:600; color:var(--muted); margin-left:auto;
                    font-variant-numeric:tabular-nums}
   .rm-body .roster td:first-child{padding-left:24px}
+
+  /* Phones ------------------------------------------------------------- */
+  @media (max-width:640px){
+    /* Nothing may force the page wider than the screen. */
+    html,body{max-width:100%; overflow-x:hidden}
+    header.top{padding:10px 12px}
+    h1{font-size:16px}
+    .updated{font-size:11px; flex:1 1 100%; min-width:0; order:3}
+    .top-row,.controls{gap:6px 8px}
+    .layout{padding:12px; gap:12px}
+
+    /* The board comes first: dividends before summary cards. */
+    aside{order:2; position:static; top:auto}
+    main{order:1}
+
+    /* Operator plumbing is desktop work -- it needs the project folder. */
+    #reloadBtn,#expBtn,#saveBtn,#fileInput,#ovInput,
+    .top-row > label.chip,.controls > label.chip{display:none !important}
+
+    /* Group headings stop sticking so rows aren't hidden behind them. */
+    .portfolio > .p-head{position:static; font-size:17px; top:auto}
+    .tab{padding:8px 12px}
+
+    /* Wide tables scroll inside their own box, never the page. */
+    .market,.rm-body{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    table{min-width:540px}
+    .roster{min-width:0}
+    .formgrid{grid-template-columns:1fr}
+  }
   .hidden{display:none !important}
   #themeBtn{min-width:82px}
 </style>
@@ -335,7 +365,7 @@ try{
 // is used when dividends.json can't be fetched (e.g. file://).
 const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-10-07T06:53:30+00:00",
+  "lastUpdated": "2026-10-11T14:59:10+00:00",
   "counterCount": 88,
   "counters": [
     {
@@ -826,7 +856,7 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-10-07",
+        "fetchedAt": "2026-10-11",
         "error": null
       },
       "manual": {

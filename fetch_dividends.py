@@ -332,6 +332,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="report only, write nothing")
     ap.add_argument("--only", default="", help="comma-separated tickers to refresh")
+    ap.add_argument("--min-ok", type=int, default=0,
+                    help="refuse to write if fewer than N counters fetched cleanly "
+                         "(guards unattended runs against a rate-limited source "
+                         "overwriting good data)")
     args = ap.parse_args()
 
     data, origin = load_base()
@@ -422,6 +426,14 @@ def main():
     if args.dry_run:
         print("\n--dry-run: nothing written")
         return 0
+
+    # An unattended run that got throttled would otherwise replace a good file
+    # with a page of errors. Leave the last good data in place instead.
+    if args.min_ok and stats["ok"] < args.min_ok:
+        print("\nABORT: only %d counter(s) fetched cleanly, expected at least %d. "
+              "Leaving %s untouched."
+              % (stats["ok"], args.min_ok, os.path.basename(OUT)), file=sys.stderr)
+        return 1
 
     payload = json.dumps(data, indent=2, ensure_ascii=False)
     with open(OUT, "w") as fh:

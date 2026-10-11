@@ -1,6 +1,6 @@
 {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-10-07T06:53:30+00:00",
+  "lastUpdated": "2026-10-11T14:59:10+00:00",
   "counterCount": 88,
   "counters": [
     {
@@ -491,7 +491,7 @@
         "estimated": null,
         "frequency": "quarterly",
         "provider": "Yahoo Finance",
-        "fetchedAt": "2026-10-07",
+        "fetchedAt": "2026-10-11",
         "error": null
       },
       "manual": {

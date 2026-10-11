@@ -39,3 +39,18 @@ once but the counter has no dividend data yet. To make them part of the project:
 The fetcher folds the roster into `dividends.json`, fetches the new counters,
 and the additions become permanent for everyone. Delete `roster.json` afterwards
 so the same edits are not replayed on the next run.
+
+## Automatic refresh
+
+`.github/workflows/refresh.yml` runs the fetcher on GitHub's servers every
+weekday at 01:00 UTC (09:00 MYT/SGT) and commits `dividends.json` and
+`index.html` back to `main` when the data moves. It can also be run on demand
+from the repository's **Actions** tab.
+
+The job passes `--min-ok 40`: if a source throttles the runner and fewer than 40
+counters come back clean, it exits without writing, so a bad run cannot replace
+good data.
+
+To read it on a phone, serve the repository over GitHub Pages
+(**Settings → Pages → Deploy from a branch → main / root**). The page is
+responsive and the scheduled commit updates the published site automatically.
