@@ -1,0 +1,48 @@
+name: Refresh dividend data
+
+# GitHub's runners have unrestricted outbound network, so this is where the
+# fetching happens. The cloud routine that publishes to the shared dashboard
+# runs half an hour later and only reads what this commits — its sandbox is
+# allowed to reach GitHub but not the finance sources.
+on:
+  schedule:
+    - cron: "3 1 * * 1-5"      # weekdays 01:03 UTC / 09:03 MYT
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-dividends
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet yfinance requests beautifulsoup4
+
+      # --min-ok 40 aborts without writing if a source throttles the runner,
+      # so a bad fetch can never replace good data.
+      - name: Fetch latest dividends
+        run: python3 fetch_dividends.py --min-ok 40
+
+      - name: Commit if the data moved
+        run: |
+          if [ -z "$(git status --porcelain dividends.json index.html)" ]; then
+            echo "No change — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dividends.json index.html
+          git commit -m "chore: scheduled dividend refresh $(date -u +%Y-%m-%d)"
+          git push

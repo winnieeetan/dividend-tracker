@@ -42,14 +42,21 @@ so the same edits are not replayed on the next run.
 
 ## Automatic refresh
 
-A scheduled cloud agent ("Dividend tracker daily refresh") runs every weekday at
-01:00 UTC / 09:00 MYT. It runs the fetcher, pushes the result to `main`, and
-writes the new snapshot into the shared dashboard's database so every open copy
-picks it up. Manage or pause it at https://claude.ai/code/routines
+Two scheduled jobs, split because they need different things:
 
-It passes `--min-ok 40`: if a source throttles the runner and fewer than 40
-counters come back clean, the run stops without writing, so a bad fetch cannot
-replace good data.
+1. **GitHub Actions** (`.github/workflows/refresh.yml`) — weekdays 01:03 UTC.
+   Runs the fetcher and commits `dividends.json` and `index.html` to `main`.
+   This is where the fetching happens: GitHub's runners have unrestricted
+   outbound network.
+2. **Cloud routine** "Publish dividend data to dashboard" — weekdays 01:33 UTC,
+   half an hour later. Reads what step 1 committed and writes it into the shared
+   dashboard's database, so every open copy of the link picks it up. Its sandbox
+   can reach GitHub but *not* the finance sources, so it never fetches.
+   Manage or pause it at https://claude.ai/code/routines
+
+Both refuse to write when the data looks wrong: the fetcher's `--min-ok 40`
+aborts if fewer than 40 counters come back clean, and the routine re-checks the
+same thing before publishing.
 
 ## Standalone file (no server, no hosting)
 
