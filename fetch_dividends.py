@@ -102,9 +102,8 @@ def build_standalone(src):
 }
 """, 1)
 
-    # These three need the project folder, so they have no meaning here.
+    # These need the project folder, so they have no meaning here.
     for a, b in [
-        ('<button class="ghost" id="reloadBtn"', '<button class="ghost hidden" id="reloadBtn"'),
         ('<label class="chip" title="Open an updated dividends.json (when viewing without a server)">',
          '<label class="chip hidden" title="Open an updated dividends.json (when viewing without a server)">'),
         ('<button class="ghost" id="saveBtn"', '<button class="ghost hidden" id="saveBtn"'),

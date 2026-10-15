@@ -251,7 +251,7 @@
     main{order:1}
 
     /* Operator plumbing is desktop work -- it needs the project folder. */
-    #reloadBtn,#expBtn,#saveBtn,#fileInput,#ovInput,
+    #expBtn,#saveBtn,#fileInput,#ovInput,
     .top-row > label.chip,.controls > label.chip{display:none !important}
 
     /* Group headings stop sticking so rows aren't hidden behind them. */
@@ -284,7 +284,6 @@ try{
     <div class="updated">Data: <b id="srcLabel">—</b> · Last updated <b id="updatedAt">—</b></div>
     <div style="flex:1"></div>
     <button class="ghost" id="themeBtn" title="Switch between light and night mode">🌙 Night</button>
-    <button class="ghost" id="reloadBtn" title="Re-read dividends.json from the server">↻ Reload data</button>
     <label class="chip" title="Open an updated dividends.json (when viewing without a server)">
       ⤒ Load dividends.json <input type="file" id="fileInput" accept="application/json" class="hidden">
     </label>
@@ -5463,6 +5462,7 @@ async function loadData(){
   collapseAll();
   buildFilterOptions();
   render();
+  startWatching();
 }
 // The board opens as an index: every portfolio and market shut, so the first
 // screen is the shape of the holdings rather than 88 rows of detail.
@@ -5830,7 +5830,6 @@ $("#themeBtn").onclick=()=>{
 sysDark.addEventListener("change", ()=>{ if(!document.documentElement.dataset.theme) paintThemeBtn(); });
 paintThemeBtn();
 
-$("#reloadBtn").onclick=loadData;
 $("#fileInput").onchange=e=>readJSON(e.target.files[0], d=>{DATA=d; SOURCE="loaded file"; banner(""); buildFilterOptions(); render();});
 $("#ovInput").onchange=e=>readJSON(e.target.files[0], d=>{
   const o=d.overrides||d; Object.assign(overrides,o); render();
@@ -6283,6 +6282,40 @@ function showTab(which){
 }
 $("#tabCalendar").onclick = ()=>showTab("calendar");
 $("#tabCounters").onclick = ()=>showTab("counters");
+
+// ---------------------------------------------------------------- live -----
+// dividends.json is rewritten by the scheduled fetch, so the page follows it
+// instead of offering a Reload button. Polling only while the tab is visible
+// keeps a backgrounded tab from asking all day; returning to the tab checks
+// immediately, which is when a stale number would actually be read.
+const WATCH_MS = 60000;
+let watchTimer = null;
+
+async function checkForNewData(){
+  if(document.hidden) return;
+  try{
+    const res = await fetch("dividends.json", {cache:"no-store"});
+    if(!res.ok) return;
+    const fresh = await res.json();
+    if(!fresh || !Array.isArray(fresh.counters)) return;
+    if(DATA && fresh.lastUpdated === DATA.lastUpdated) return;   // nothing moved
+    DATA = fresh;
+    SOURCE = "dividends.json (live)";
+    applyRoster();
+    buildFilterOptions();
+    render();
+    banner("Updated to data from <b>"
+      + esc(new Date(fresh.lastUpdated).toLocaleString()) + "</b>.");
+    setTimeout(()=>banner(""), 5000);
+  }catch(e){ /* offline, or opened from disk: keep what we have */ }
+}
+
+function startWatching(){
+  if(watchTimer) clearInterval(watchTimer);
+  watchTimer = setInterval(checkForNewData, WATCH_MS);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) checkForNewData(); });
+  window.addEventListener("focus", checkForNewData);
+}
 
 loadData();
 </script>

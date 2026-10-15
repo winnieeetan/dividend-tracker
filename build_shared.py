@@ -7,7 +7,7 @@ than served from this folder:
     snapshot baked into the file, so a refresh reaches every open copy;
   * calendar ticks are stored per viewer, so the same account sees one set
     of ticks on a laptop and a phone;
-  * controls that need this folder (reload, import/export, save-to-server)
+  * controls that need this folder (import/export, save-to-server)
     and the Counters tab are hidden.
 """
 import re
@@ -110,7 +110,6 @@ def build(src: str) -> str:
 
     # Controls that need the project folder, and the roster, are not for viewers.
     for a, b in [
-        ('<button class="ghost" id="reloadBtn"', '<button class="ghost hidden" id="reloadBtn"'),
         ('<label class="chip" title="Open an updated dividends.json (when viewing without a server)">',
          '<label class="chip hidden" title="Open an updated dividends.json (when viewing without a server)">'),
         ('<button class="ghost" id="expBtn"', '<button class="ghost hidden" id="expBtn"'),
