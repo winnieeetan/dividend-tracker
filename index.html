@@ -364,8 +364,8 @@ try{
 // is used when dividends.json can't be fetched (e.g. file://).
 const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-10-11T15:05:37+00:00",
-  "counterCount": 88,
+  "lastUpdated": "2026-10-18T15:23:40+00:00",
+  "counterCount": 90,
   "counters": [
     {
       "id": "M_PORTFOLIO|KLSE|7204",
@@ -2339,6 +2339,63 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       "source": "manual_needed"
     },
     {
+      "id": "M_PORTFOLIO|NYSE/NASDAQ (US)|LEU",
+      "ticker": "LEU",
+      "name": "Centrus Energy Corp",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "NYSE/NASDAQ (US)",
+      "marketKind": "US",
+      "yahoo": "LEU",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/stocks/LEU/dividend/"
+        },
+        "alt": {
+          "label": "Nasdaq",
+          "url": "https://www.nasdaq.com/market-activity/stocks/leu/dividend-history"
+        }
+      },
+      "officialLink": {
+        "label": "SEC EDGAR",
+        "url": "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&ticker=LEU&type=8-K&dateb=&owner=include&count=40"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": "Yahoo Finance",
+        "fetchedAt": "2026-10-18",
+        "error": "last dividend 2005-11-22 (over 400 days ago)"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
+    },
+    {
       "id": "M_PORTFOLIO|HKSE|02318",
       "ticker": "02318",
       "name": "Ping An Insurance",
@@ -2622,6 +2679,63 @@ const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
       },
       "verified": null,
       "source": "manual_needed"
+    },
+    {
+      "id": "M_PORTFOLIO|HKSE|03191",
+      "ticker": "03191",
+      "name": "Global X China Semiconductor ETF",
+      "portfolio": "M_PORTFOLIO",
+      "portfolioLabel": "Portfolio M",
+      "market": "HKSE",
+      "marketKind": "HKEX",
+      "yahoo": "3191.HK",
+      "type": "no_dividend",
+      "manualLinks": {
+        "primary": {
+          "label": "Global X HK",
+          "url": "https://www.globalxetfs.com.hk/funds/3191/"
+        },
+        "alt": {
+          "label": "StockAnalysis",
+          "url": "https://stockanalysis.com/quote/hkg/3191/dividend/"
+        }
+      },
+      "officialLink": {
+        "label": "HKEXnews",
+        "url": "https://www1.hkexnews.hk/search/titlesearch.xhtml?lang=en&market=SEHK&searchType=1&t1code=40000&t2Gcode=-2&t2code=40100&stockId=3191"
+      },
+      "auto": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "frequency": null,
+        "provider": null,
+        "fetchedAt": null,
+        "error": "no dividend history at Yahoo Finance"
+      },
+      "manual": {
+        "exDate": null,
+        "paymentDate": null,
+        "currency": null,
+        "announced": null,
+        "estimated": null,
+        "note": null,
+        "enteredAt": null
+      },
+      "estimate": {
+        "exDate": null,
+        "paymentDate": null,
+        "announced": null,
+        "currency": null,
+        "provider": null,
+        "url": null,
+        "fetchedAt": null,
+        "status": null
+      },
+      "verified": null,
+      "source": "no_dividend"
     },
     {
       "id": "P_PORTFOLIO|SGX|D05",
