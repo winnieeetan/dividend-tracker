@@ -6408,7 +6408,8 @@ $("#tabCounters").onclick = ()=>showTab("counters");
 // instead of offering a Reload button. Polling only while the tab is visible
 // keeps a backgrounded tab from asking all day; returning to the tab checks
 // immediately, which is when a stale number would actually be read.
-const WATCH_MS = 60000;
+const WATCH_MS = 60000;   // dividends.json — rewritten every 15 minutes
+const CHECKS_MS = 3000;   // shared ticks — tiny, and people expect them instantly
 let watchTimer = null;
 
 async function checkForNewData(){
@@ -6432,7 +6433,10 @@ async function checkForNewData(){
 
 function startWatching(){
   if(watchTimer) clearInterval(watchTimer);
-  watchTimer = setInterval(()=>{ checkForNewData(); pollChecks(); }, WATCH_MS);
+  watchTimer = setInterval(checkForNewData, WATCH_MS);
+  // The ticks payload is a few hundred bytes from a container on this machine,
+  // so it can be checked far more often than the dividend file.
+  setInterval(pollChecks, CHECKS_MS);
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ checkForNewData(); pollChecks(); } });
   window.addEventListener("focus", ()=>{ checkForNewData(); pollChecks(); });
 }
@@ -6455,6 +6459,7 @@ async function initSharedChecks(){
     CHECKS_API = true;
     applyChecksState(state);
     paintShareNote();
+    startChecksStream();
   }catch(e){
     CHECKS_API = false;    // keep localStorage behaviour, say so in the footer
     paintShareNote();
@@ -6475,6 +6480,10 @@ function applyChecksState(state){
 // One request per tick, carrying only that counter, so two people ticking
 // different rows never overwrite each other.
 async function pushTick(id){
+  if(CHECKS_API === null){
+    // Probe still in flight — wait for it rather than losing the tick.
+    await initSharedChecks();
+  }
   if(!CHECKS_API) return;
   const body = checks[id] || {cal:false, rec:false};
   if(pendingTicks.has(id)) { pendingTicks.set(id, body); return; }
@@ -6487,6 +6496,29 @@ async function pushTick(id){
     if(res.ok) applyChecksState(await res.json());
   }catch(e){ /* stays in localStorage; the next poll reconciles */ }
   finally{ pendingTicks.delete(id); }
+}
+
+// A tick on another device arrives over this stream almost immediately. If the
+// stream cannot be established, the short poll below still carries the change.
+let checksStream = null;
+function startChecksStream(){
+  if(!CHECKS_API || checksStream || typeof EventSource === "undefined") return;
+  try{
+    checksStream = new EventSource("api/checks/stream");
+    checksStream.onmessage = ev => {
+      try{
+        const state = JSON.parse(ev.data);
+        if(state && state.rev !== checksRev){ applyChecksState(state); render(); }
+      }catch(e){}
+    };
+    checksStream.onerror = () => {
+      // Browser retries on its own; drop the handle so a later call can rebuild.
+      if(checksStream && checksStream.readyState === EventSource.CLOSED){
+        checksStream = null;
+        setTimeout(startChecksStream, 5000);
+      }
+    };
+  }catch(e){ checksStream = null; }
 }
 
 async function pollChecks(){

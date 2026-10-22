@@ -6,6 +6,7 @@ This keeps them in one file instead, shared by everyone who can reach the site,
 which on this host means everyone on the tailnet.
 
     GET  /api/checks              -> {"checks": {...}, "rev": N}
+    GET  /api/checks/stream       -> server-sent events, one per change
     PUT  /api/checks/<counterId>  -> merge {"cal": bool, "rec": bool}, returns the same
 
 Writes are per counter, never the whole map, so two people ticking different
@@ -24,6 +25,8 @@ MAX_BODY = 64 * 1024
 VALID_FIELDS = ("cal", "rec")
 
 _lock = threading.Lock()
+# Bumped on every write; waiters wake and push the new state to their browser.
+_changed = threading.Condition(_lock)
 
 
 def _load():
@@ -59,10 +62,43 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
-        if self.path.rstrip("/") != "/api/checks":
+        path = self.path.rstrip("/")
+        if path == "/api/checks/stream":
+            return self._stream()
+        if path != "/api/checks":
             return self._send(404, {"error": "not found"})
         with _lock:
             self._send(200, _load())
+
+    def _stream(self):
+        """Hold the connection open and write an event whenever a tick changes.
+
+        A tick made on one device shows up on every other open page in about as
+        long as the network takes, instead of waiting for the next poll.
+        """
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")   # nginx: do not buffer
+        self.end_headers()
+
+        last = None
+        try:
+            while True:
+                with _changed:
+                    # Wake on a write, or every 20s to send a keep-alive so
+                    # proxies and laptops-asleep do not silently drop us.
+                    _changed.wait(timeout=20)
+                    state = _load()
+                if state.get("rev") != last:
+                    last = state.get("rev")
+                    self.wfile.write(b"data: " + json.dumps(state).encode() + b"\n\n")
+                else:
+                    self.wfile.write(b": keep-alive\n\n")
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError, OSError):
+            pass   # the page went away; nothing to clean up
 
     def do_PUT(self):
         prefix = "/api/checks/"
@@ -97,6 +133,7 @@ class Handler(BaseHTTPRequestHandler):
                 state["checks"][counter_id] = entry
             state["rev"] = int(state.get("rev", 0)) + 1
             _save(state)
+            _changed.notify_all()      # wake every open stream
             self._send(200, state)
 
     # Quiet: one line per write, nothing per read.
