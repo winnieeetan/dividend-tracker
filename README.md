@@ -102,6 +102,23 @@ starts the VM at login, so the dashboard comes back by itself after a reboot.
 updates the live site with no rebuild, and nginx sends `no-store` on both so the
 page's 60-second poll sees it.
 
+### Shared calendar ticks
+
+"Added to calendar" is a fact about the dividend, not about the browser that
+recorded it, so the ticks are held server-side and everyone who can open the
+dashboard sees the same ones. A second container (`dividend-checks`,
+`deploy/checks-api.py`) keeps them in a Docker volume:
+
+    GET  /api/checks              the whole map, plus a revision number
+    PUT  /api/checks/<counterId>  merge one counter's tick
+
+Each tick is its own request, so two people ticking different rows cannot
+overwrite each other, and the page re-reads the map on the same 60-second cycle
+it uses for the data. The header says **● Ticks shared** when a store answered.
+
+Where none does — the standalone file, the hosted claude.ai copy, or the API
+being down — the page falls back to this-browser-only ticks and says so.
+
 
 ## Keeping the data fresh
 

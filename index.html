@@ -264,6 +264,9 @@
     .roster{min-width:0}
     .formgrid{grid-template-columns:1fr}
   }
+  .syncchip{margin-left:8px; font-size:11px; padding:2px 8px; border-radius:999px;
+            border:1px solid var(--line); color:var(--muted); white-space:nowrap}
+  .syncchip.on{background:var(--green-bg); color:var(--green); border-color:transparent}
   .hidden{display:none !important}
   #themeBtn{min-width:82px}
 </style>
@@ -281,7 +284,7 @@ try{
 <header class="top">
   <div class="top-row">
     <h1><span class="dot"></span> Dividend Tracker</h1>
-    <div class="updated">Data: <b id="srcLabel">—</b> · Last updated <b id="updatedAt">—</b></div>
+    <div class="updated">Data: <b id="srcLabel">—</b> · Last updated <b id="updatedAt">—</b><span id="shareNote" class="syncchip">○ Ticks on this device</span></div>
     <div style="flex:1"></div>
     <button class="ghost" id="themeBtn" title="Switch between light and night mode">🌙 Night</button>
     <label class="chip" title="Open an updated dividends.json (when viewing without a server)">
@@ -5482,7 +5485,8 @@ let SOURCE = "embedded";
 const CHECKS_KEY = "dividend-tracker/checks@1";
 const checks = loadChecks();
 function loadChecks(){ try{ return JSON.parse(localStorage.getItem(CHECKS_KEY)) || {}; }catch(e){ return {}; } }
-function saveChecks(){ try{ localStorage.setItem(CHECKS_KEY, JSON.stringify(checks)); }catch(e){} }
+function saveChecksLocal(){ try{ localStorage.setItem(CHECKS_KEY, JSON.stringify(checks)); }catch(e){} }
+function saveChecks(){ saveChecksLocal(); }
 const overrides = {};
 const editingOpen = {};
 const collapsed = {};
@@ -5577,6 +5581,7 @@ async function loadData(){
   buildFilterOptions();
   render();
   startWatching();
+  initSharedChecks().then(render);
 }
 // The board opens as an index: every portfolio and market shut, so the first
 // screen is the shape of the holdings rather than 88 rows of detail.
@@ -5880,6 +5885,7 @@ function wireRows(){
       checks[id]=checks[id]||{cal:false,rec:false};
       checks[id][k]=cb.checked;
       saveChecks();
+      pushTick(id);
       render();
     };
   });
@@ -6426,9 +6432,81 @@ async function checkForNewData(){
 
 function startWatching(){
   if(watchTimer) clearInterval(watchTimer);
-  watchTimer = setInterval(checkForNewData, WATCH_MS);
-  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) checkForNewData(); });
-  window.addEventListener("focus", checkForNewData);
+  watchTimer = setInterval(()=>{ checkForNewData(); pollChecks(); }, WATCH_MS);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ checkForNewData(); pollChecks(); } });
+  window.addEventListener("focus", ()=>{ checkForNewData(); pollChecks(); });
+}
+
+// ------------------------------------------------------- shared ticks ------
+// "Added to calendar" is a fact about the dividend, not about the browser that
+// recorded it, so the ticks live server-side and everyone who can reach the
+// site sees the same ones. Where no store answers -- the standalone file, the
+// hosted copy, a dead API -- the page falls back to localStorage and still
+// works, it just stops being shared.
+let CHECKS_API = null;     // null until proven present
+let checksRev = -1;
+const pendingTicks = new Map();
+
+async function initSharedChecks(){
+  try{
+    const res = await fetch("api/checks", {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const state = await res.json();
+    CHECKS_API = true;
+    applyChecksState(state);
+    paintShareNote();
+  }catch(e){
+    CHECKS_API = false;    // keep localStorage behaviour, say so in the footer
+    paintShareNote();
+  }
+}
+
+function applyChecksState(state){
+  if(!state || typeof state.checks !== "object") return;
+  if(state.rev === checksRev) return;         // nothing new
+  checksRev = state.rev;
+  for(const k in checks) delete checks[k];
+  for(const [id, v] of Object.entries(state.checks)){
+    if(v && typeof v === "object") checks[id] = {cal:!!v.cal, rec:!!v.rec};
+  }
+  saveChecksLocal();                          // offline copy
+}
+
+// One request per tick, carrying only that counter, so two people ticking
+// different rows never overwrite each other.
+async function pushTick(id){
+  if(!CHECKS_API) return;
+  const body = checks[id] || {cal:false, rec:false};
+  if(pendingTicks.has(id)) { pendingTicks.set(id, body); return; }
+  pendingTicks.set(id, body);
+  try{
+    const res = await fetch("api/checks/"+encodeURIComponent(id), {
+      method:"PUT", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(pendingTicks.get(id)),
+    });
+    if(res.ok) applyChecksState(await res.json());
+  }catch(e){ /* stays in localStorage; the next poll reconciles */ }
+  finally{ pendingTicks.delete(id); }
+}
+
+async function pollChecks(){
+  if(!CHECKS_API || document.hidden) return;
+  try{
+    const res = await fetch("api/checks", {cache:"no-store"});
+    if(!res.ok) return;
+    const state = await res.json();
+    if(state.rev !== checksRev){ applyChecksState(state); render(); }
+  }catch(e){}
+}
+
+function paintShareNote(){
+  const el = document.getElementById("shareNote");
+  if(!el) return;
+  el.textContent = CHECKS_API ? "● Ticks shared" : "○ Ticks on this device";
+  el.title = CHECKS_API
+    ? "Everyone who can open this dashboard sees the same calendar ticks."
+    : "No shared store reachable — ticks are kept in this browser only.";
+  el.classList.toggle("on", !!CHECKS_API);
 }
 
 loadData();
