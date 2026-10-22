@@ -67,3 +67,29 @@ network. Ticks and Counters-tab edits are saved in whichever browser opens it.
 
 Its data is frozen at the moment it was built, so rebuild it (`python3
 fetch_dividends.py`) whenever you want current figures.
+
+## Serving it to the team over Tailscale
+
+The dashboard runs in its own container and is published to the tailnet, so
+teammates reach it and nothing else can — the container binds to loopback only,
+and `tailscale serve` is the sole route in.
+
+One-time setup:
+
+```bash
+bash deploy/setup.sh
+```
+
+It installs Homebrew (asks for your password once), Colima and the Docker CLI,
+starts the VM, builds the container, and publishes it. Re-running it is safe.
+
+Tailscale Serve must be enabled on the tailnet first — a one-time click in the
+admin console. The script says so and stops if it isn't.
+
+`deploy/` holds the whole setup: `Dockerfile` (nginx:alpine), `nginx.conf`
+(no-store on the data files so the dashboard's 60-second poll sees new data),
+and `docker-compose.yml`. `index.html` and `dividends.json` are bind-mounted
+read-only, so a scheduled fetch updates the live site with no rebuild.
+
+After a reboot the container restarts itself but the Colima VM does not —
+run `colima start`.
