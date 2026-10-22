@@ -25,6 +25,7 @@ MAX_BODY = 64 * 1024
 VALID_FIELDS = ("cal", "rec")
 
 _lock = threading.Lock()
+_clients = {"n": 0}
 # Bumped on every write; waiters wake and push the new state to their browser.
 _changed = threading.Condition(_lock)
 
@@ -83,6 +84,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Accel-Buffering", "no")   # nginx: do not buffer
         self.end_headers()
 
+        with _lock:
+            _clients["n"] += 1
+            n = _clients["n"]
+        peer = self.headers.get("X-Forwarded-For") or self.client_address[0]
+        self.log_line("STREAM open  from %s (%d connected)" % (peer, n))
+
         last = None
         try:
             while True:
@@ -99,6 +106,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError, OSError):
             pass   # the page went away; nothing to clean up
+        finally:
+            with _lock:
+                _clients["n"] -= 1
+                n = _clients["n"]
+            self.log_line("STREAM close from %s (%d connected)" % (peer, n))
 
     def do_PUT(self):
         prefix = "/api/checks/"
@@ -136,7 +148,12 @@ class Handler(BaseHTTPRequestHandler):
             _changed.notify_all()      # wake every open stream
             self._send(200, state)
 
-    # Quiet: one line per write, nothing per read.
+    def log_line(self, msg):
+        import sys
+        sys.stderr.write("%s  %s\n" % (self.log_date_time_string(), msg))
+        sys.stderr.flush()
+
+    # Quiet: writes and stream lifecycle only, nothing per ordinary read.
     def log_message(self, fmt, *args):
         if self.command != "GET":
             super().log_message(fmt, *args)
