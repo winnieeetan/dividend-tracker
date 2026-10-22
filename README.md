@@ -102,3 +102,29 @@ starts the VM at login, so the dashboard comes back by itself after a reboot.
 updates the live site with no rebuild, and nginx sends `no-store` on both so the
 page's 60-second poll sees it.
 
+
+## Keeping the data fresh
+
+A launch agent refreshes it on this machine — the one that hosts the dashboard,
+and the one with working network to Yahoo and KLSE Screener:
+
+    ~/Library/LaunchAgents/com.winnie.dividend-refresh.plist
+      -> deploy/refresh-agent.sh  every 15 minutes
+
+A run takes about 25 seconds for 90 counters. It writes `dividends.json` and
+`index.html` in place; the container bind-mounts both, so the live site updates
+with no rebuild and the open page notices within its 60-second poll.
+
+The agent skips a tick if the previous run is still going or the machine is
+offline, and passes `--min-ok 40`, so a throttled source leaves the good data
+alone rather than overwriting it.
+
+    tail -f ~/.local/state/dividend-tracker/refresh.log   # what it has been doing
+
+To change the interval, edit `StartInterval` (seconds) in the plist, then:
+
+    launchctl unload ~/Library/LaunchAgents/com.winnie.dividend-refresh.plist
+    launchctl load   ~/Library/LaunchAgents/com.winnie.dividend-refresh.plist
+
+The GitHub Actions workflow is manual-only now; two schedulers committing the
+same files would make this machine's working tree drift from `main`.

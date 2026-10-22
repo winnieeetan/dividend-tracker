@@ -1,12 +1,14 @@
 name: Refresh dividend data
 
-# GitHub's runners have unrestricted outbound network, so this is where the
-# fetching happens. The cloud routine that publishes to the shared dashboard
-# runs half an hour later and only reads what this commits — its sandbox is
-# allowed to reach GitHub but not the finance sources.
+# Manual only. The refresh now runs on the iMac that hosts the dashboard
+# (deploy/refresh-agent.sh via launchd), which already has working network to
+# both sources and writes straight into what the container serves.
+#
+# Leaving this on a schedule too would have both committing dividends.json and
+# index.html, so the host's working tree would drift from main and every local
+# refresh would collide with a bot commit. Run it from the Actions tab if the
+# iMac is ever down for a while.
 on:
-  schedule:
-    - cron: "3 1 * * 1-5"      # weekdays 01:03 UTC / 09:03 MYT
   workflow_dispatch:
 
 permissions:
