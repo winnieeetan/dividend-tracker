@@ -5,7 +5,11 @@
 #   bash deploy/setup.sh
 #
 # Safe to re-run — every step checks whether it is already done.
-# You will be asked for your password once, by Homebrew's installer.
+#
+# This machine already has the toolchain installed WITHOUT Homebrew: the docker
+# CLI, compose plugin, lima and colima are plain binaries under ~/.local, which
+# needs no admin rights. This script prefers that install when it finds it and
+# only falls back to Homebrew on a machine that has neither.
 
 set -euo pipefail
 
@@ -19,6 +23,17 @@ warn() { printf '    \033[33m!\033[0m %s\n' "$1"; }
 die()  { printf '\n\033[31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
 # --- 1. Homebrew -----------------------------------------------------------
+# Prefer the home-directory install if it is there.
+export PATH="$HOME/.local/bin:$HOME/.local/lima/bin:$PATH"
+if command -v colima >/dev/null 2>&1 && command -v docker >/dev/null 2>&1; then
+  say "Toolchain"
+  ok "using the existing install under ~/.local (no Homebrew needed)"
+  SKIP_INSTALL=1
+else
+  SKIP_INSTALL=0
+fi
+
+if [ "$SKIP_INSTALL" = "0" ]; then
 say "Homebrew"
 if command -v brew >/dev/null 2>&1; then
   ok "already installed: $(command -v brew)"
@@ -40,6 +55,7 @@ for pkg in colima docker docker-compose; do
   if brew list "$pkg" >/dev/null 2>&1; then ok "$pkg already installed"
   else warn "installing $pkg"; brew install "$pkg"; fi
 done
+fi   # SKIP_INSTALL
 
 # --- 3. Start the Linux VM that runs containers ----------------------------
 say "Colima VM"

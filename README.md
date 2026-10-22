@@ -70,26 +70,35 @@ fetch_dividends.py`) whenever you want current figures.
 
 ## Serving it to the team over Tailscale
 
-The dashboard runs in its own container and is published to the tailnet, so
-teammates reach it and nothing else can — the container binds to loopback only,
-and `tailscale serve` is the sole route in.
+The dashboard runs in its own container, published to the tailnet by
+`tailscale serve`. The container binds to loopback only, so Serve is the one
+route in — reachable on the tailnet, not on the local network, never public.
 
-One-time setup:
+    https://winnies-imac.tail823d40.ts.net
 
-```bash
-bash deploy/setup.sh
-```
+### What is installed
 
-It installs Homebrew (asks for your password once), Colima and the Docker CLI,
-starts the VM, builds the container, and publishes it. Re-running it is safe.
+Docker here is Colima, installed as plain binaries under the home directory, so
+it needed no admin password:
 
-Tailscale Serve must be enabled on the tailnet first — a one-time click in the
-admin console. The script says so and stops if it isn't.
+    ~/.local/bin/docker                  docker CLI 29.9.2
+    ~/.docker/cli-plugins/docker-compose compose 5.6.1
+    ~/.local/lima/bin/limactl            lima 2.2.1
+    ~/.local/bin/colima                  colima 0.10.3
 
-`deploy/` holds the whole setup: `Dockerfile` (nginx:alpine), `nginx.conf`
-(no-store on the data files so the dashboard's 60-second poll sees new data),
-and `docker-compose.yml`. `index.html` and `dividends.json` are bind-mounted
-read-only, so a scheduled fetch updates the live site with no rebuild.
+It runs on Apple's Virtualization.framework (no QEMU). `~/.zshrc` puts these on
+PATH, and a launch agent (`~/Library/LaunchAgents/com.winnie.colima.plist`)
+starts the VM at login, so the dashboard comes back by itself after a reboot.
 
-After a reboot the container restarts itself but the Colima VM does not —
-run `colima start`.
+### Day to day
+
+    docker compose -f deploy/docker-compose.yml logs -f    # watch requests
+    docker compose -f deploy/docker-compose.yml restart    # reload
+    docker compose -f deploy/docker-compose.yml down       # stop
+    colima status                                          # is the VM up?
+    tailscale serve status                                 # is it published?
+
+`index.html` and `dividends.json` are bind-mounted read-only, so a refresh
+updates the live site with no rebuild, and nginx sends `no-store` on both so the
+page's 60-second poll sees it.
+
