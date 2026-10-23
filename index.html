@@ -333,11 +333,6 @@ try{
     </div>
 
     <div class="card">
-      <h2>Data status</h2>
-      <div id="statusCounts" class="legend"></div>
-    </div>
-
-    <div class="card">
       <h2>Legend</h2>
       <div class="legend">
         <div class="row"><span class="urg u-red">▲ ≤7d</span><span>Payment within 7 days — act now.</span></div>
@@ -5854,7 +5849,6 @@ function render(){
   else main.appendChild(board);
 
   updateStats();
-  renderStatusCounts();
   wireRows();
 }
 
@@ -5868,15 +5862,6 @@ function updateStats(){
   $("#calBar").style.width=(tot?100*cal/tot:0)+"%";
 }
 
-function renderStatusCounts(){
-  const counts={};
-  for(const c of DATA.counters){ const s=rowSource(c); counts[s]=(counts[s]||0)+1; }
-  const map=[["verified","✓✓ Verified"],["auto","✓ Auto"],["manual","✎ Manual"],["estimated","≈ Estimated (verify)"],["manual_needed","🟧 [manual] needed"],
-            ["distribution","Distribution"],["no_dividend","No dividend"],["unlisted","Not traded"]];
-  $("#statusCounts").innerHTML = map.filter(([k])=>counts[k])
-     .map(([k,l])=>`<div class="row"><b>${counts[k]}</b><span>${l}</span></div>`).join("")
-     + `<div class="row" style="margin-top:6px"><b>${DATA.counters.length}</b><span>counters total</span></div>`;
-}
 
 function wireRows(){
   document.querySelectorAll('input[type=checkbox][data-k]').forEach(cb=>{
