@@ -123,7 +123,14 @@ being down — the page falls back to this-browser-only ticks and says so.
 ## Keeping the data fresh
 
 A launch agent refreshes it on this machine — the one that hosts the dashboard,
-and the one with working network to Yahoo and KLSE Screener:
+and the one with working network to Yahoo and KLSE Screener.
+
+**The project must not live in ~/Desktop.** macOS protects Desktop, Documents and
+Downloads: a launchd agent can write there but cannot read, so the fetcher failed
+with "Operation not permitted" on every run while the project sat on the Desktop.
+It now lives at `~/dividend-tracker`, with a symlink left on the Desktop for
+convenience. Moving it back into a protected folder will silently break the
+refresh again.
 
     ~/Library/LaunchAgents/com.winnie.dividend-refresh.plist
       -> deploy/refresh-agent.sh  every 15 minutes
