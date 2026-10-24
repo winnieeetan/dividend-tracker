@@ -19,6 +19,7 @@ services:
     command: ["python3", "/app/checks-api.py"]
     environment:
       CHECKS_STORE: /data/checks.json
+      ROSTER_STORE: /data/roster.json
       PORT: "8081"
     volumes:
       - ./checks-api.py:/app/checks-api.py:ro

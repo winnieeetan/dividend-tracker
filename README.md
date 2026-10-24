@@ -113,8 +113,17 @@ dashboard sees the same ones. A second container (`dividend-checks`,
     PUT  /api/checks/<counterId>  merge one counter's tick
 
 Each tick is its own request, so two people ticking different rows cannot
-overwrite each other, and the page re-reads the map on the same 60-second cycle
-it uses for the data. The header says **● Ticks shared** when a store answered.
+overwrite each other, and a tick reaches other open pages over an SSE stream in
+well under a second. The header says **● Ticks shared** when a store answered.
+
+The counter roster is shared the same way:
+
+    GET  /api/roster   the added/removed overlay, plus a revision number
+    PUT  /api/roster   replace it
+
+So adding or removing a counter in the Counters tab changes the board for
+everyone, not just the browser that did it, and a removal is reversible from the
+Removed section on any device.
 
 Where none does — the standalone file, the hosted claude.ai copy, or the API
 being down — the page falls back to this-browser-only ticks and says so.

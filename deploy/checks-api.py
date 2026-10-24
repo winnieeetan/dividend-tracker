@@ -9,6 +9,12 @@ which on this host means everyone on the tailnet.
     GET  /api/checks/stream       -> server-sent events, one per change
     PUT  /api/checks/<counterId>  -> merge {"cal": bool, "rec": bool}, returns the same
 
+    GET  /api/roster              -> {"added": [...], "removed": [...], "rev": N}
+    PUT  /api/roster              -> replace it wholesale, returns the same
+
+Counters added or removed in the dashboard belong to the board, not to the
+browser that made the change, so the roster lives here beside the ticks.
+
 Writes are per counter, never the whole map, so two people ticking different
 rows at the same time cannot overwrite each other. Standard library only.
 """
@@ -20,6 +26,7 @@ from urllib.parse import unquote
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 STORE = os.environ.get("CHECKS_STORE", "/data/checks.json")
+ROSTER = os.environ.get("ROSTER_STORE", "/data/roster.json")
 PORT = int(os.environ.get("PORT", "8081"))
 MAX_BODY = 64 * 1024
 VALID_FIELDS = ("cal", "rec")
@@ -28,6 +35,25 @@ _lock = threading.Lock()
 _clients = {"n": 0}
 # Bumped on every write; waiters wake and push the new state to their browser.
 _changed = threading.Condition(_lock)
+
+
+def _load_roster():
+    try:
+        with open(ROSTER) as fh:
+            d = json.load(fh)
+        if isinstance(d, dict) and isinstance(d.get("added"), list):
+            return d
+    except (OSError, ValueError):
+        pass
+    return {"added": [], "removed": [], "rev": 0}
+
+
+def _save_roster(state):
+    tmp = ROSTER + ".tmp"
+    os.makedirs(os.path.dirname(ROSTER), exist_ok=True)
+    with open(tmp, "w") as fh:
+        json.dump(state, fh)
+    os.replace(tmp, ROSTER)
 
 
 def _load():
@@ -66,6 +92,9 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.rstrip("/")
         if path == "/api/checks/stream":
             return self._stream()
+        if path == "/api/roster":
+            with _lock:
+                return self._send(200, _load_roster())
         if path != "/api/checks":
             return self._send(404, {"error": "not found"})
         with _lock:
@@ -98,9 +127,13 @@ class Handler(BaseHTTPRequestHandler):
                     # proxies and laptops-asleep do not silently drop us.
                     _changed.wait(timeout=20)
                     state = _load()
-                if state.get("rev") != last:
-                    last = state.get("rev")
-                    self.wfile.write(b"data: " + json.dumps(state).encode() + b"\n\n")
+                    rstate = _load_roster()
+                stamp = (state.get("rev"), rstate.get("rev"))
+                if stamp != last:
+                    last = stamp
+                    payload = dict(state)
+                    payload["roster"] = rstate
+                    self.wfile.write(b"data: " + json.dumps(payload).encode() + b"\n\n")
                 else:
                     self.wfile.write(b": keep-alive\n\n")
                 self.wfile.flush()
@@ -113,6 +146,8 @@ class Handler(BaseHTTPRequestHandler):
             self.log_line("STREAM close from %s (%d connected)" % (peer, n))
 
     def do_PUT(self):
+        if self.path.rstrip("/") == "/api/roster":
+            return self._put_roster()
         prefix = "/api/checks/"
         if not self.path.startswith(prefix):
             return self._send(404, {"error": "not found"})
@@ -146,6 +181,33 @@ class Handler(BaseHTTPRequestHandler):
             state["rev"] = int(state.get("rev", 0)) + 1
             _save(state)
             _changed.notify_all()      # wake every open stream
+            self._send(200, state)
+
+    def _put_roster(self):
+        """The roster is small and edited by one person at a time, so it is
+        replaced wholesale rather than merged per counter like the ticks."""
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            return self._send(400, {"error": "bad length"})
+        if length <= 0 or length > 2 * 1024 * 1024:
+            return self._send(400, {"error": "bad body size"})
+        try:
+            payload = json.loads(self.rfile.read(length))
+        except ValueError:
+            return self._send(400, {"error": "bad json"})
+        if not isinstance(payload, dict) or not isinstance(payload.get("added"), list) \
+           or not isinstance(payload.get("removed"), list):
+            return self._send(400, {"error": "expected {added: [], removed: []}"})
+
+        with _lock:
+            state = {
+                "added": payload["added"][:500],
+                "removed": [str(x)[:200] for x in payload["removed"]][:500],
+                "rev": int(_load_roster().get("rev", 0)) + 1,
+            }
+            _save_roster(state)
+            _changed.notify_all()
             self._send(200, state)
 
     def log_line(self, msg):
