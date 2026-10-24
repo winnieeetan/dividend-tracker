@@ -19,6 +19,7 @@ Writes are per counter, never the whole map, so two people ticking different
 rows at the same time cannot overwrite each other. Standard library only.
 """
 
+import datetime as dt
 import json
 import os
 import threading
@@ -27,6 +28,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 STORE = os.environ.get("CHECKS_STORE", "/data/checks.json")
 ROSTER = os.environ.get("ROSTER_STORE", "/data/roster.json")
+EVENTS = os.environ.get("EVENTS_STORE", "/data/events.json")
+OVERRIDES = os.environ.get("OVERRIDES_STORE", "/data/overrides.json")
+MAX_EVENTS = 2000          # oldest are dropped past this
+OWNER = os.environ.get("OWNER_LOGIN", "")
 PORT = int(os.environ.get("PORT", "8081"))
 MAX_BODY = 64 * 1024
 VALID_FIELDS = ("cal", "rec")
@@ -35,6 +40,22 @@ _lock = threading.Lock()
 _clients = {"n": 0}
 # Bumped on every write; waiters wake and push the new state to their browser.
 _changed = threading.Condition(_lock)
+
+
+def _read_json(path, default):
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return default
+
+
+def _write_json(path, value):
+    tmp = path + ".tmp"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(tmp, "w") as fh:
+        json.dump(value, fh)
+    os.replace(tmp, path)
 
 
 def _load_roster():
@@ -79,6 +100,41 @@ def _save(state):
 class Handler(BaseHTTPRequestHandler):
     server_version = "dividend-checks/1.0"
 
+    def actor(self):
+        """Who is making this request.
+
+        Tailscale Serve sets these headers on every proxied request and
+        overrides anything the client sent, so they cannot be forged from a
+        browser. A request that bypassed Serve (the healthcheck, or curl on
+        loopback) carries none, and is recorded as "local".
+        """
+        login = (self.headers.get("Tailscale-User-Login") or "").strip()
+        name = (self.headers.get("Tailscale-User-Name") or "").strip()
+        if not login:
+            return {"login": "", "name": "local"}
+        return {"login": login[:200], "name": (name or login)[:200]}
+
+    def is_owner(self):
+        return bool(OWNER) and self.actor()["login"].lower() == OWNER.lower()
+
+    def record(self, action, target="", detail=""):
+        """Append one entry to the activity log. Never raises: an audit trail
+        failing must not take a tick with it."""
+        try:
+            who = self.actor()
+            entry = {
+                "at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+                "login": who["login"], "name": who["name"],
+                "action": action, "target": str(target)[:200], "detail": str(detail)[:300],
+            }
+            log = _read_json(EVENTS, [])
+            if not isinstance(log, list):
+                log = []
+            log.append(entry)
+            _write_json(EVENTS, log[-MAX_EVENTS:])
+        except Exception:
+            pass
+
     def _send(self, code, payload):
         body = json.dumps(payload).encode()
         self.send_response(code)
@@ -95,6 +151,21 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/roster":
             with _lock:
                 return self._send(200, _load_roster())
+        if path == "/api/whoami":
+            a = self.actor()
+            return self._send(200, {"login": a["login"], "name": a["name"],
+                                    "isOwner": self.is_owner()})
+        if path == "/api/events":
+            # The log names who did what; only the owner may read it.
+            if not self.is_owner():
+                return self._send(403, {"error": "not permitted"})
+            with _lock:
+                log = _read_json(EVENTS, [])
+            return self._send(200, {"events": list(reversed(log))[:500],
+                                    "total": len(log)})
+        if path == "/api/overrides":
+            with _lock:
+                return self._send(200, _read_json(OVERRIDES, {"overrides": {}, "rev": 0}))
         if path != "/api/checks":
             return self._send(404, {"error": "not found"})
         with _lock:
@@ -148,6 +219,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_PUT(self):
         if self.path.rstrip("/") == "/api/roster":
             return self._put_roster()
+        if self.path.startswith("/api/overrides/"):
+            return self._put_override(unquote(self.path[len("/api/overrides/"):]))
         prefix = "/api/checks/"
         if not self.path.startswith(prefix):
             return self._send(404, {"error": "not found"})
@@ -181,7 +254,10 @@ class Handler(BaseHTTPRequestHandler):
             state["rev"] = int(state.get("rev", 0)) + 1
             _save(state)
             _changed.notify_all()      # wake every open stream
-            self._send(200, state)
+        on = entry.get("cal") or entry.get("rec")
+        self.record("tick" if on else "untick", counter_id,
+                    "calendar" if entry.get("cal") else ("reconciled" if entry.get("rec") else ""))
+        self._send(200, state)
 
     def _put_roster(self):
         """The roster is small and edited by one person at a time, so it is
@@ -201,6 +277,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(400, {"error": "expected {added: [], removed: []}"})
 
         with _lock:
+            before = _load_roster()
             state = {
                 "added": payload["added"][:500],
                 "removed": [str(x)[:200] for x in payload["removed"]][:500],
@@ -208,7 +285,46 @@ class Handler(BaseHTTPRequestHandler):
             }
             _save_roster(state)
             _changed.notify_all()
-            self._send(200, state)
+            prev_add = {c.get("id") for c in (before.get("added") or [])}
+            prev_rem = set(before.get("removed") or [])
+        for c in state["added"]:
+            if c.get("id") not in prev_add:
+                self.record("add-counter", c.get("id", ""),
+                            "%s %s" % (c.get("ticker", ""), c.get("name", "")))
+        for rid in state["removed"]:
+            if rid not in prev_rem:
+                self.record("remove-counter", rid, "")
+        self._send(200, state)
+
+    def _put_override(self, counter_id):
+        """One counter's hand-entered values. Shared, like the ticks."""
+        if not counter_id or len(counter_id) > 200:
+            return self._send(400, {"error": "bad counter id"})
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+            payload = json.loads(self.rfile.read(length)) if 0 < length <= MAX_BODY else None
+        except ValueError:
+            payload = None
+        if not isinstance(payload, dict):
+            return self._send(400, {"error": "bad json"})
+
+        fields = {k: payload[k] for k in
+                  ("exDate", "paymentDate", "currency", "announced", "estimated",
+                   "note", "verified") if k in payload}
+        with _lock:
+            state = _read_json(OVERRIDES, {"overrides": {}, "rev": 0})
+            if not isinstance(state.get("overrides"), dict):
+                state = {"overrides": {}, "rev": 0}
+            if fields:
+                state["overrides"][counter_id] = fields
+            else:
+                state["overrides"].pop(counter_id, None)
+            state["rev"] = int(state.get("rev", 0)) + 1
+            _write_json(OVERRIDES, state)
+            _changed.notify_all()
+        self.record("edit" if fields else "clear-edit", counter_id,
+                    ", ".join("%s=%s" % (k, v) for k, v in sorted(fields.items()))[:300])
+        self._send(200, state)
 
     def log_line(self, msg):
         import sys

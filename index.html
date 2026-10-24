@@ -267,6 +267,29 @@
   .syncchip{margin-left:8px; font-size:11px; padding:2px 8px; border-radius:999px;
             border:1px solid var(--line); color:var(--muted); white-space:nowrap}
   .syncchip.on{background:var(--green-bg); color:var(--green); border-color:transparent}
+  /* Activity log */
+  .ev-day{font-size:11.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted);
+          padding:16px 2px 7px; border-bottom:1px solid var(--line); margin-top:4px}
+  .ev{display:grid; grid-template-columns:62px 150px 1fr; gap:14px; align-items:baseline;
+      padding:9px 2px; border-bottom:1px solid var(--line)}
+  .ev:last-child{border-bottom:none}
+  .ev-time{font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums}
+  .ev-who{font-size:12.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .ev-what{font-size:13px}
+  .ev-act{display:inline-block; font-size:10.5px; padding:1px 7px; border-radius:4px;
+          margin-right:7px; white-space:nowrap; font-weight:600; letter-spacing:.02em}
+  .ev-tick{background:var(--green-bg); color:var(--green)}
+  .ev-untick{background:var(--nodiv-bg); color:var(--muted)}
+  .ev-add{background:var(--accent-soft); color:var(--accent)}
+  .ev-remove{background:var(--red-bg); color:var(--red)}
+  .ev-edit{background:var(--amber-bg); color:var(--amber)}
+  .ev-target{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; color:var(--muted)}
+  .ev-detail{font-size:12px; color:var(--muted)}
+  @media (max-width:640px){
+    .ev{grid-template-columns:54px 1fr; gap:8px}
+    .ev-who{grid-column:2; font-size:12px}
+    .ev-what{grid-column:2}
+  }
   .hidden{display:none !important}
   #themeBtn{min-width:82px}
 </style>
@@ -313,6 +336,7 @@ try{
   <div class="tabs" role="tablist">
     <button class="tab" id="tabCalendar" role="tab" aria-selected="true" aria-controls="board">Calendar</button>
     <button class="tab" id="tabCounters" role="tab" aria-selected="false" aria-controls="counters">Counters</button>
+    <button class="tab hidden" id="tabActivity" role="tab" aria-selected="false" aria-controls="activity">Activity</button>
   </div>
 </header>
 
@@ -322,6 +346,7 @@ try{
   <main>
     <div id="board"><div class="empty">Loading…</div></div>
     <div id="counters" class="mgr hidden"></div>
+    <div id="activity" class="mgr hidden"></div>
   </main>
 
   <aside>
@@ -362,7 +387,7 @@ try{
 // is used when dividends.json can't be fetched (e.g. file://).
 const EMBEDDED_DATA = /*__EMBEDDED_DATA__*/ {
   "schema": "dividend-tracker/dividends@1",
-  "lastUpdated": "2026-10-24T08:32:35+00:00",
+  "lastUpdated": "2026-10-24T08:59:42+00:00",
   "counterCount": 89,
   "counters": [
     {
@@ -5520,6 +5545,7 @@ async function loadData(){
   render();
   startWatching();
   initSharedChecks().then(render);
+  initWhoami();
 }
 // The board opens as an index: every portfolio and market shut, so the first
 // screen is the shape of the holdings rather than 88 rows of detail.
@@ -5850,7 +5876,18 @@ function saveEdit(id, tr){
   else if(prevV) overrides[id]={verified:prevV};
   else delete overrides[id];
   editingOpen[id]=false;
+  pushOverride(id);
   render();
+}
+
+// Hand-entered values used to live only in this tab. They now go to the same
+// store as the ticks, which both shares them and puts them in the log.
+function pushOverride(id){
+  if(!CHECKS_API) return;
+  fetch("api/overrides/" + encodeURIComponent(id), {
+    method:"PUT", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify(overrides[id] || {}),
+  }).catch(()=>{});
 }
 
 function chip(idSel, key){ const c=$(idSel); c.onclick=()=>{ filters[key]=!filters[key]; c.classList.toggle("active",filters[key]); render(); }; }
@@ -6352,16 +6389,20 @@ function exportRoster(){
 }
 
 function showTab(which){
-  const onCounters = which === "counters";
-  $("#board").classList.toggle("hidden", onCounters);
-  $("#counters").classList.toggle("hidden", !onCounters);
-  $(".controls").classList.toggle("hidden", onCounters);
-  $("#tabCalendar").setAttribute("aria-selected", String(!onCounters));
-  $("#tabCounters").setAttribute("aria-selected", String(onCounters));
-  if(onCounters) renderCounters();
+  const isCal = which === "calendar";
+  $("#board").classList.toggle("hidden", !isCal);
+  $("#counters").classList.toggle("hidden", which !== "counters");
+  $("#activity").classList.toggle("hidden", which !== "activity");
+  $(".controls").classList.toggle("hidden", !isCal);
+  $("#tabCalendar").setAttribute("aria-selected", String(isCal));
+  $("#tabCounters").setAttribute("aria-selected", String(which === "counters"));
+  $("#tabActivity").setAttribute("aria-selected", String(which === "activity"));
+  if(which === "counters") renderCounters();
+  if(which === "activity") renderActivity();
 }
 $("#tabCalendar").onclick = ()=>showTab("calendar");
 $("#tabCounters").onclick = ()=>showTab("counters");
+$("#tabActivity").onclick = ()=>showTab("activity");
 
 // ---------------------------------------------------------------- live -----
 // dividends.json is rewritten by the scheduled fetch, so the page follows it
@@ -6516,6 +6557,95 @@ function paintShareNote(){
     ? "Everyone who can open this dashboard sees the same calendar ticks."
     : "No shared store reachable — ticks are kept in this browser only.";
   el.classList.toggle("on", !!CHECKS_API);
+}
+
+// ------------------------------------------------------- activity log ------
+// Who changed what, and when. The server attributes every write from the
+// identity Tailscale puts on the request, so this cannot be rewritten from a
+// browser. Only the owner may read it, and the tab stays hidden for everyone
+// else rather than showing them a locked door.
+let WHOAMI = null;
+
+async function initWhoami(){
+  try{
+    const res = await fetch("api/whoami", {cache:"no-store"});
+    if(!res.ok) return;
+    WHOAMI = await res.json();
+    if(WHOAMI.isOwner) $("#tabActivity").classList.remove("hidden");
+  }catch(e){}
+}
+
+const ACTION_LABEL = {
+  "tick":           ["ev-tick",   "ticked"],
+  "untick":         ["ev-untick", "unticked"],
+  "add-counter":    ["ev-add",    "added"],
+  "remove-counter": ["ev-remove", "removed"],
+  "edit":           ["ev-edit",   "edited"],
+  "clear-edit":     ["ev-untick", "cleared edit"],
+};
+
+function counterLabel(id){
+  const c = (DATA && DATA.counters || []).find(x => x.id === id);
+  if(c) return esc(c.ticker) + " " + esc(c.name);
+  // A removed counter is no longer in the data; its id still names it.
+  const bits = String(id).split("|");
+  return esc(bits[2] || id);
+}
+
+async function renderActivity(){
+  const wrap = $("#activity");
+  wrap.innerHTML = '<div class="card"><h2>Activity</h2>'
+    + '<p class="hint">Every change made through the dashboard, newest first. '
+    + 'Ticks, counters added or removed, and hand-entered values. The scheduled '
+    + 'data refresh is not listed — only what people did.</p>'
+    + '<div id="evList"><div class="empty">Loading…</div></div></div>';
+
+  let data = null;
+  try{
+    const res = await fetch("api/events", {cache:"no-store"});
+    if(res.status === 403){
+      $("#evList").innerHTML = '<div class="empty">Only the board’s owner can read this.</div>';
+      return;
+    }
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    data = await res.json();
+  }catch(e){
+    $("#evList").innerHTML = '<div class="empty">No activity store reachable.</div>';
+    return;
+  }
+
+  const evs = data.events || [];
+  if(!evs.length){
+    $("#evList").innerHTML = '<div class="empty">Nothing recorded yet.</div>';
+    return;
+  }
+
+  const box = el("div");
+  let lastDay = "";
+  for(const e of evs){
+    const when = new Date(e.at);
+    const day = when.toLocaleDateString(undefined,
+      {weekday:"long", day:"numeric", month:"long", year:"numeric"});
+    if(day !== lastDay){
+      lastDay = day;
+      box.appendChild(el("div","ev-day", esc(day)));
+    }
+    const [cls, verb] = ACTION_LABEL[e.action] || ["ev-untick", esc(e.action)];
+    const row = el("div","ev");
+    row.innerHTML =
+        '<div class="ev-time">' + when.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"}) + '</div>'
+      + '<div class="ev-who">' + esc(e.name || e.login || "unknown") + '</div>'
+      + '<div class="ev-what"><span class="ev-act ' + cls + '">' + verb + '</span>'
+      + '<span class="ev-target">' + counterLabel(e.target) + '</span>'
+      + (e.detail ? ' <span class="ev-detail">· ' + esc(e.detail) + '</span>' : '')
+      + '</div>';
+    box.appendChild(row);
+  }
+  const foot = el("p","hint", "Showing " + evs.length + " of " + data.total
+    + " recorded. The oldest are dropped past 2000.");
+  $("#evList").innerHTML = "";
+  $("#evList").appendChild(box);
+  $("#evList").appendChild(foot);
 }
 
 loadData();
