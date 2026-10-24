@@ -125,6 +125,12 @@ So adding or removing a counter in the Counters tab changes the board for
 everyone, not just the browser that did it, and a removal is reversible from the
 Removed section on any device.
 
+Those edits become **permanent on the next refresh**. The agent pulls the
+overlay, lets the fetcher fold it into `dividends.json`, and only then clears
+it — so a throttled run postpones the edit rather than losing it. In practice a
+counter removed in the dashboard is gone from the project file within 15
+minutes, and the Removed section empties once it is.
+
 Where none does — the standalone file, the hosted claude.ai copy, or the API
 being down — the page falls back to this-browser-only ticks and says so.
 
